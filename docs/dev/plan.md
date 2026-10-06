@@ -7,7 +7,7 @@
 | 빌드 | Vite | 빠르고 설정이 적다. 빌드 결과를 아티팩트로 올리기 쉽다 |
 | 화면 | Preact (+ CSS) | 이 게임은 카드·패널·한글 텍스트가 많은 UI 중심 게임이라 게임 엔진(Phaser 등)보다 웹 UI 방식이 맞다. 도트 그림은 `image-rendering: pixelated`로 표시 |
 | 규칙 | `src/core` 순수 TypeScript | 화면과 분리해 테스트로 검증 |
-| 테스트 | Vitest (규칙), Playwright (화면 동작, Chromium 설치돼 있음) | |
+| 테스트 | Vitest (규칙), Playwright (화면 동작, Chromium 설치돼 있음) | `@playwright/test` 추가: 실제 폰 크기 화면에서 클릭·스크린샷으로 QA |
 
 - 처음 제안했던 Phaser는 실시간 액션(뱀서식)일 때의 선택이었다. 턴제 카드 + CCTV 화면으로 바뀌면서 웹 UI 방식이 더 단순하고 오류가 적다.
 - 검토한 다른 선택지: Unity(C#), Unreal(C++), Godot, Phaser. 편집기 중심 엔진은 클라우드에서 화면 없이 만들고 검증하기 어렵고, 이 게임은 3D·실시간 물리가 필요 없어 웹 UI 방식으로 확정 (2026-10-06, 사용자 확인).

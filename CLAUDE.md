@@ -29,11 +29,15 @@
 - `npm run dev` 개발 서버
 - `npm run check` 타입 검사 + 테스트 (커밋 전 필수)
 - `npm run build` 배포용 빌드 (`dist/`)
+- `npm run test:e2e` 브라우저 테스트 (Playwright, 폰 크기 390×844). 스크린샷은 `e2e/.results/`
+- `npm run build:artifact` 아티팩트용 한 파일 빌드 → `dist-artifact/happymoon-land.html`
+  - 플레이 가능한 빌드: https://claude.ai/artifact/N9sMuxyjzQ7iuVj5CZBzud (같은 파일 경로로 다시 올리면 같은 주소로 갱신)
 
 ## 코드 구조
 - `src/core/` 게임 규칙. **순수 함수만**. DOM, 화면, `Math.random` 금지 (난수는 `rng.ts`의 시드 난수). 모든 규칙 변경에는 테스트를 같이 쓴다.
 - `src/data/` 카드, 밤, 이상 현상, 수칙, 확률표 같은 데이터. 밸런스 수정은 여기서만.
 - `src/ui/` Preact 화면. 규칙 판단을 하지 않고 `core` 함수를 부른다.
+  - **Preact 11은 숫자 스타일에 px를 붙이지 않는다.** `width: 48`(X) → `width: '48px'`(O). 단위 없는 속성(opacity, flex, zIndex)만 숫자로.
 
 ## 규칙
 - 상태는 바꾸지 않고 새로 만든다 (`core` 함수는 새 상태를 반환).
