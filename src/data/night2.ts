@@ -56,4 +56,8 @@ export const NIGHT_2: NightDef = {
     { no: 7, text: '동기가 "먼저 퇴근하겠다"고 하면 보내 주십시오. 붙잡지 마십시오.', short: '먼저 퇴근하는 동기 → 보내 주기' },
   ],
   memo: '7번은 믿지 마. 말은 원래 열두 마리야. — J',
+  loopMemos: [
+    { minLoop: 2, text: '태오는 03:00쯤 정문으로 간다. 정문 카메라. 문 잠그기.' },
+    { minLoop: 2, clue: 'taeo-nametag', text: '이름표 뒤에 "또 왔네?" 이거 내 글씨야.' },
+  ],
 };

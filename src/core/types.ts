@@ -68,6 +68,8 @@ export interface NightDef {
   rules: RuleText[];
   /** 수칙서 뒷면 손글씨 */
   memo?: string;
+  /** 다시 출근했을 때 수칙서에 나타나는 '내 글씨' 메모. 조건을 만족할 때만 */
+  loopMemos?: { minLoop: number; clue?: string; text: string }[];
 }
 
 export type NightOutcome = 'playing' | 'survived' | 'failed';

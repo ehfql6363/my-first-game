@@ -74,3 +74,62 @@ describe('밸런스', () => {
     for (const id of REWARD_POOL) expect(CARDS[id]).toBeDefined();
   });
 });
+
+import { itemRates } from '../core/gacha';
+import { COMPANIONS } from './companions';
+import { GACHA } from './gacha';
+import { RELICS } from './relics';
+
+describe('캡슐 기계 데이터', () => {
+  it('등급 확률 합 100%, 모든 등급에 아이템이 있다', () => {
+    const sum = Object.values(GACHA.rates).reduce((a, b) => a + b, 0);
+    expect(sum).toBeCloseTo(1, 10);
+    for (const g of Object.keys(GACHA.rates)) expect(GACHA.items.some((i) => i.grade === g), g).toBe(true);
+    expect(itemRates(GACHA).reduce((a, r) => a + r.rate, 0)).toBeCloseTo(1, 10);
+  });
+
+  it('아이템 id는 겹치지 않고, 주는 카드는 모두 존재한다', () => {
+    const ids = GACHA.items.map((i) => i.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const i of GACHA.items) if (i.grantsCard) expect(CARDS[i.grantsCard], i.id).toBeDefined();
+  });
+
+  it('스토리 단서는 캡슐 기계에 없다', () => {
+    for (const i of GACHA.items) expect(CLUES[i.id]).toBeUndefined();
+  });
+
+  it('동료 3명, 기념품 6개', () => {
+    expect(Object.keys(COMPANIONS)).toHaveLength(3);
+    expect(Object.keys(RELICS)).toHaveLength(6);
+  });
+});
+
+import { combineMods } from '../core/types';
+
+describe('기념품 밸런스', () => {
+  it('어떤 기념품 2개 조합으로도 2일차 생존율이 85% 아래로 떨어지지 않는다 (저주는 작아야 한다)', () => {
+    const ids = Object.keys(RELICS);
+    for (let i = 0; i < ids.length; i++)
+      for (let j = i; j < ids.length; j++) {
+        const set = i === j ? [ids[i]] : [ids[i], ids[j]];
+        const mods = combineMods(set.map((r) => RELICS[r].effect));
+        let ok = 0;
+        for (let seed = 1; seed <= 100; seed++) {
+          const night = NIGHTS[1];
+          let s = createNight(night, STARTER_DECK, seed, mods);
+          while (s.outcome === 'playing') {
+            for (const a of activeAnomalies(night, s)) {
+              if (a.clue) continue;
+              const idx = s.hand.findIndex((id) => CARDS[id].response === a.requires);
+              if (idx < 0) continue;
+              const r = playCard(night, CARDS, s, idx, a.cameraId);
+              if (r.ok) s = r.state;
+            }
+            s = endTurn(night, s);
+          }
+          if (s.outcome === 'survived') ok++;
+        }
+        expect(ok / 100, set.join('+')).toBeGreaterThanOrEqual(0.85);
+      }
+  });
+});

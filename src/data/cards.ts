@@ -12,6 +12,10 @@ export const CARDS: Record<string, CardDef> = {
   'zoom-plus': { id: 'zoom-plus', name: '카메라 확대+', cost: 0, kind: 'basic', response: 'zoom', desc: '비용 없이 모든 카메라 확인' },
   whistle: { id: 'whistle', name: '호루라기', cost: 2, kind: 'gear', response: 'any', desc: '이 카메라의 이상 현상 하나를 쫓아낸다' },
   coffee: { id: 'coffee', name: '보온병 커피', cost: 0, kind: 'gear', gainBattery: 1, desc: '배터리 +1. 식었다' },
+  // 동료 카드 (캡슐 기계에서 동료를 구출하면 덱에 들어간다)
+  patrol: { id: 'patrol', name: '대신 순찰', cost: 2, kind: 'ally', response: 'any', resolveAll: true, desc: '김반장. 이 카메라의 이상 현상을 전부 정리한다' },
+  'mascot-act': { id: 'mascot-act', name: '같은 편인 척', cost: 1, kind: 'ally', response: 'light', anyCamera: true, desc: '하루. 어느 카메라든 조명 끄기 대응 하나' },
+  wrench: { id: 'wrench', name: '렌치', cost: 1, kind: 'ally', response: 'lock', anyCamera: true, desc: '도윤. 어느 카메라든 문 잠그기 대응 하나' },
 };
 
 export const STARTER_DECK: string[] = [
