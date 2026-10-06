@@ -17,6 +17,7 @@ export function createNight(night: NightDef, deck: string[], seed: number): Nigh
     drawPile,
     discard: [],
     resolved: [],
+    revealed: false,
     outcome: 'playing',
     seed: nextSeed,
   };
@@ -50,6 +51,8 @@ export function playCard(
     discard: [...state.discard, cardId],
   };
 
+  if (card.response === 'zoom') return { ok: true, state: { ...next, revealed: true } };
+
   const target = activeAnomalies(night, state).find(
     (a) => a.cameraId === cameraId && a.requires === card.response,
   );
@@ -70,10 +73,19 @@ export function endTurn(night: NightDef, state: NightState): NightState {
     risk,
     outcome,
     battery: NIGHT_RULES.batteryPerTurn,
+    revealed: false,
     hand: [],
     discard: [...state.discard, ...state.hand],
   };
   return outcome === 'playing' ? draw(next, NIGHT_RULES.handSize) : next;
+}
+
+/** 게임 속 시각 "HH:MM" */
+export function clockText(night: NightDef, turn: number): string {
+  const minutes = turn * night.minutesPerTurn;
+  const hh = Math.floor(minutes / 60);
+  const mm = minutes % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
 function draw(state: NightState, count: number): NightState {

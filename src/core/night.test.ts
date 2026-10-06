@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { activeAnomalies, createNight, endTurn, playCard } from './night';
+import { activeAnomalies, clockText, createNight, endTurn, playCard } from './night';
 import { NIGHT_RULES, type NightDef, type NightState } from './types';
 import { CARDS } from '../data/cards';
 
 const NIGHT: NightDef = {
   id: 'test',
   day: 1,
+  minutesPerTurn: 20,
   startTurn: 0,
   endTurn: 3,
   cameras: [{ id: 'cam', name: '테스트' }],
-  anomalies: [{ id: 'smile', name: '웃는 문루', cameraId: 'cam', appearsAtTurn: 0, requires: 'light', riskPerTurn: 2 }],
+  anomalies: [{ id: 'smile', name: '웃는 문루', kind: 'smile', cameraId: 'cam', appearsAtTurn: 0, requires: 'light', riskPerTurn: 2 }],
+  rules: [],
 };
 
 function withHand(state: NightState, hand: string[]): NightState {
@@ -74,5 +76,19 @@ describe('밤 경비실', () => {
     let s = createNight({ ...NIGHT, endTurn: 99, anomalies: [] }, deck, 7);
     for (let i = 0; i < 5; i++) s = endTurn({ ...NIGHT, endTurn: 99, anomalies: [] }, s);
     expect(s.hand.length + s.drawPile.length + s.discard.length).toBe(deck.length);
+  });
+
+  it('카메라 확대는 이번 턴에만 이상 유무를 드러내고, 이상 현상을 해결하지는 않는다', () => {
+    const s = withHand(createNight(NIGHT, Array(10).fill('lock'), 1), ['zoom']);
+    const r = playCard(NIGHT, CARDS, s, 0, 'cam');
+    expect(r.ok && r.state.revealed).toBe(true);
+    expect(r.ok && r.resolvedAnomaly).toBeUndefined();
+    expect(r.ok && endTurn(NIGHT, r.state).revealed).toBe(false);
+  });
+
+  it('시계는 턴과 턴 길이로 계산한다', () => {
+    expect(clockText(NIGHT, 0)).toBe('00:00');
+    expect(clockText(NIGHT, 8)).toBe('02:40');
+    expect(clockText(NIGHT, 18)).toBe('06:00');
   });
 });

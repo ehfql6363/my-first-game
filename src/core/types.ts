@@ -22,6 +22,8 @@ export interface CameraDef {
 export interface AnomalyDef {
   id: string;
   name: string;
+  /** 화면에 어떤 모습으로 그릴지 (같은 종류는 같은 그림) */
+  kind: string;
   cameraId: string;
   /** 이 턴부터 카메라에 나타난다 */
   appearsAtTurn: number;
@@ -31,14 +33,23 @@ export interface AnomalyDef {
   riskPerTurn: number;
 }
 
+export interface RuleText {
+  no: number;
+  text: string;
+}
+
 export interface NightDef {
   id: string;
   day: number;
-  /** 10분 단위 턴. 00:00 = 0, 06:00 = 36 */
+  /** 한 턴이 흐르는 게임 속 시간(분). 00:00부터 센다 */
+  minutesPerTurn: number;
   startTurn: number;
+  /** 이 턴에 도달하면 생존 (06:00) */
   endTurn: number;
   cameras: CameraDef[];
   anomalies: AnomalyDef[];
+  /** 수칙서에 보이는 문장. 판정은 anomalies가 한다 */
+  rules: RuleText[];
 }
 
 export type NightOutcome = 'playing' | 'survived' | 'failed';
@@ -51,6 +62,8 @@ export interface NightState {
   drawPile: string[];
   discard: string[];
   resolved: string[];
+  /** 이번 턴에 카메라 확대를 써서 모든 카메라의 이상 유무가 보이는지 */
+  revealed: boolean;
   outcome: NightOutcome;
   seed: number;
 }
