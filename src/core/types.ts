@@ -36,6 +36,8 @@ export interface AnomalyDef {
 export interface RuleText {
   no: number;
   text: string;
+  /** 경비실 화면 띠에 보일 짧은 문장. 없으면 띠에 표시하지 않음 */
+  short?: string;
 }
 
 export interface NightDef {

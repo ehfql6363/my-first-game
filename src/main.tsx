@@ -1,5 +1,5 @@
 import { render } from 'preact';
 import { App } from './ui/App';
+import './ui/styles.css';
 
-document.body.style.margin = '0';
 render(<App />, document.getElementById('app')!);

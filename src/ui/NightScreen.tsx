@@ -1,0 +1,135 @@
+import { useState } from 'preact/hooks';
+import { activeAnomalies, clockText, createNight, endTurn, playCard } from '../core/night';
+import { NIGHT_RULES, type NightDef, type NightState } from '../core/types';
+import { CARDS, STARTER_DECK } from '../data/cards';
+import { CameraView } from './CameraView';
+import { Rulebook } from './Rulebook';
+
+interface Props {
+  night: NightDef;
+  seed: number;
+  onFinish: (state: NightState) => void;
+}
+
+const FAIL_REASON = {
+  cursed: '킥킥킥킥. 손에서 떨어지지 않는다.',
+  'no-battery': '배터리가 부족하다.',
+  'not-playing': '',
+  'bad-index': '',
+} as const;
+
+export function NightScreen({ night, seed, onFinish }: Props) {
+  const [state, setState] = useState(() => createNight(night, STARTER_DECK, seed));
+  const [camIndex, setCamIndex] = useState(0);
+  const [msg, setMsg] = useState('근무 시작. 카메라를 넘겨 보며 수칙대로 대응하십시오.');
+  const [showRules, setShowRules] = useState(false);
+
+  const cam = night.cameras[camIndex];
+  const active = activeAnomalies(night, state);
+  const kindsOn = (camId: string) => active.filter((a) => a.cameraId === camId).map((a) => a.kind);
+
+  function play(index: number) {
+    const r = playCard(night, CARDS, state, index, cam.id);
+    if (!r.ok) {
+      setMsg(FAIL_REASON[r.reason]);
+      return;
+    }
+    setState(r.state);
+    const card = CARDS[state.hand[index]];
+    if (card.response === 'zoom') setMsg('모든 카메라의 이상 유무가 표시됐다. 이번 턴만.');
+    else if (r.resolvedAnomaly) setMsg(`대응 성공: ${r.resolvedAnomaly.name}.`);
+    else setMsg(`${cam.name}에 [${card.name}]. 아무 일도 일어나지 않았다.`);
+  }
+
+  function finishTurn() {
+    const next = endTurn(night, state);
+    const gained = next.risk - state.risk;
+    setState(next);
+    if (next.outcome !== 'playing') {
+      onFinish(next);
+      return;
+    }
+    const passed = `${night.minutesPerTurn}분이 지났다.`;
+    setMsg(gained > 0 ? `${passed} 어딘가에서 웃음소리가 커진다. 위험도 +${gained}` : `${passed} 조용하다. …너무 조용하다.`);
+  }
+
+  return (
+    <div class="screen">
+      <div class="hud">
+        <div class="hud-left">
+          <div class="rule-label">NIGHT 0{night.day} · 경비실</div>
+          <div class="meter">
+            배터리
+            {Array.from({ length: NIGHT_RULES.batteryPerTurn }, (_, i) => (
+              <div key={i} class={i < state.battery ? 'pip on' : 'pip'} />
+            ))}
+          </div>
+          <div class="meter">
+            위험도
+            <div class="risk-bar" role="meter" aria-valuemin={0} aria-valuemax={NIGHT_RULES.maxRisk} aria-valuenow={state.risk} aria-label="위험도">
+              <div style={{ width: `${(state.risk / NIGHT_RULES.maxRisk) * 100}%` }} />
+            </div>
+            <span style={{ color: 'var(--pink)', fontFamily: 'var(--pixel)' }}>{state.risk}/{NIGHT_RULES.maxRisk}</span>
+          </div>
+        </div>
+        <div class="clock">
+          <b>{clockText(night, state.turn)}</b>
+          <span>06:00까지 {night.endTurn - state.turn}턴</span>
+        </div>
+      </div>
+
+      <button type="button" class="rule-strip" onClick={() => setShowRules(true)}>
+        {night.rules.filter((r) => r.short).map((r) => (
+          <div key={r.no}><b>{r.no}.</b> {r.short}</div>
+        ))}
+        <small>눌러서 수칙서 전체 보기</small>
+      </button>
+
+      <CameraView cameraId={cam.id} cameraName={cam.name} code={`CAM 0${camIndex + 1}`} clock={clockText(night, state.turn)} kinds={kindsOn(cam.id)} />
+
+      <div class="thumbs">
+        {night.cameras.map((c, i) => {
+          const bad = kindsOn(c.id).length > 0;
+          return (
+            <button type="button" key={c.id} class={i === camIndex ? 'thumb on' : 'thumb'} aria-pressed={i === camIndex} onClick={() => setCamIndex(i)}>
+              <span class="code">CAM 0{i + 1}</span>
+              <span>{c.name}</span>
+              {state.revealed && <span class={bad ? 'flag bad' : 'flag ok'}>{bad ? '이상' : '없음'}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <div class="msg" role="status">{msg}</div>
+
+      <div style={{ fontSize: '10px', color: 'var(--muted)' }}>카드를 누르면 지금 보는 카메라({cam.name})에 사용합니다.</div>
+      <div class="hand">
+        {state.hand.map((id, i) => {
+          const c = CARDS[id];
+          const cursed = c.cost === null;
+          const disabled = !cursed && (c.cost ?? 0) > state.battery;
+          return (
+            <button type="button" key={`${id}-${i}`} class={cursed ? 'card curse' : 'card'} disabled={disabled} onClick={() => play(i)}>
+              <span class="cost">{cursed ? 'X' : c.cost}</span>
+              <span class="name">{c.name}</span>
+              <span class="desc">{c.desc}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <button type="button" class="btn-main" onClick={finishTurn}>
+        턴 종료 · {night.minutesPerTurn}분 경과
+      </button>
+
+      {showRules && (
+        <div class="overlay" role="dialog" aria-modal="true" aria-label="수칙서" onClick={() => setShowRules(false)}>
+          <div style={{ width: '100%', maxWidth: '398px', display: 'flex', flexDirection: 'column', gap: '12px' }} onClick={(e) => e.stopPropagation()}>
+            <Rulebook night={night} />
+            <button type="button" class="btn-sub" onClick={() => setShowRules(false)}>닫기</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
