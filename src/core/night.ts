@@ -26,7 +26,12 @@ export function createNight(night: NightDef, deck: string[], seed: number): Nigh
 
 /** 지금 카메라에 떠 있고 아직 대응하지 않은 이상 현상 */
 export function activeAnomalies(night: NightDef, state: NightState): AnomalyDef[] {
-  return night.anomalies.filter((a) => a.appearsAtTurn <= state.turn && !state.resolved.includes(a.id));
+  return night.anomalies.filter(
+    (a) =>
+      a.appearsAtTurn <= state.turn &&
+      (a.expiresAtTurn === undefined || state.turn < a.expiresAtTurn) &&
+      !state.resolved.includes(a.id),
+  );
 }
 
 export function playCard(
@@ -47,15 +52,17 @@ export function playCard(
   let next: NightState = {
     ...state,
     hand,
-    battery: state.battery - card.cost,
+    battery: state.battery - card.cost + (card.gainBattery ?? 0),
     discard: [...state.discard, cardId],
   };
 
   if (card.response === 'zoom') return { ok: true, state: { ...next, revealed: true } };
 
-  const target = activeAnomalies(night, state).find(
-    (a) => a.cameraId === cameraId && a.requires === card.response,
-  );
+  const target = card.response
+    ? activeAnomalies(night, state).find(
+        (a) => a.cameraId === cameraId && (card.response === 'any' || a.requires === card.response),
+      )
+    : undefined;
   if (target) next = { ...next, resolved: [...next.resolved, target.id] };
   return { ok: true, state: next, resolvedAnomaly: target };
 }
@@ -86,6 +93,11 @@ export function clockText(night: NightDef, turn: number): string {
   const hh = Math.floor(minutes / 60);
   const mm = minutes % 60;
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+/** 대응하지 않은 채 이번 턴 시작과 함께 사라진 이상 현상 */
+export function expiredAt(night: NightDef, state: NightState): AnomalyDef[] {
+  return night.anomalies.filter((a) => a.expiresAtTurn === state.turn && !state.resolved.includes(a.id));
 }
 
 function draw(state: NightState, count: number): NightState {

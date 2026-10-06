@@ -1,6 +1,7 @@
 // 게임 규칙에 쓰이는 타입. DOM이나 화면 코드는 여기 들어오지 않는다.
 
-export type ResponseId = 'light' | 'lock' | 'ignore' | 'zoom';
+/** any = 어떤 이상 현상에도 대응 가능한 카드 */
+export type ResponseId = 'light' | 'lock' | 'ignore' | 'zoom' | 'any';
 export type CardKind = 'basic' | 'gear' | 'ally' | 'curse';
 
 export interface CardDef {
@@ -12,6 +13,8 @@ export interface CardDef {
   desc: string;
   /** 이 카드가 해결할 수 있는 대응 종류 */
   response?: ResponseId;
+  /** 낼 때 얻는 배터리 */
+  gainBattery?: number;
 }
 
 export interface CameraDef {
@@ -27,10 +30,17 @@ export interface AnomalyDef {
   cameraId: string;
   /** 이 턴부터 카메라에 나타난다 */
   appearsAtTurn: number;
-  /** 수칙상 올바른 대응 */
+  /** 이 턴이 되면 사라진다 (대응하지 않았어도). 없으면 해결할 때까지 남는다 */
+  expiresAtTurn?: number;
+  /** 수칙상 올바른 대응. 거짓 수칙이 걸린 이상 현상이면 '진짜' 올바른 대응 */
   requires: ResponseId;
   /** 대응하지 않은 채 턴이 끝날 때마다 오르는 위험도 */
   riskPerTurn: number;
+  /** 해결하면 얻는 단서 id (거짓 수칙을 간파했을 때의 보상) */
+  clue?: string;
+  /** 해결했을 때 / 그냥 사라졌을 때 보여 줄 문장 */
+  resolvedText?: string;
+  expiredText?: string;
 }
 
 export interface RuleText {

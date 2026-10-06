@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { activeAnomalies, clockText, createNight, endTurn, playCard } from './night';
+import { activeAnomalies, clockText, createNight, endTurn, expiredAt, playCard } from './night';
+import type { CardDef } from './types';
 import { NIGHT_RULES, type NightDef, type NightState } from './types';
 import { CARDS } from '../data/cards';
 
@@ -90,5 +91,29 @@ describe('밤 경비실', () => {
     expect(clockText(NIGHT, 0)).toBe('00:00');
     expect(clockText(NIGHT, 8)).toBe('02:40');
     expect(clockText(NIGHT, 18)).toBe('06:00');
+  });
+
+  it('만능 카드(any)는 그 카메라의 어떤 이상 현상이든 해결한다', () => {
+    const cards: Record<string, CardDef> = { ...CARDS, whistle: { id: 'whistle', name: '호루라기', cost: 2, kind: 'gear', response: 'any', desc: '' } };
+    const s = withHand(createNight(NIGHT, Array(10).fill('lock'), 1), ['whistle']);
+    const r = playCard(NIGHT, cards, s, 0, 'cam');
+    expect(r.ok && r.resolvedAnomaly?.id).toBe('smile');
+  });
+
+  it('배터리 회복 카드는 비용을 내고 배터리를 얻는다', () => {
+    const cards: Record<string, CardDef> = { ...CARDS, coffee: { id: 'coffee', name: '커피', cost: 0, kind: 'gear', gainBattery: 1, desc: '' } };
+    const s = withHand(createNight(NIGHT, Array(10).fill('lock'), 1), ['coffee']);
+    const r = playCard(NIGHT, cards, s, 0, 'cam');
+    expect(r.ok && r.state.battery).toBe(NIGHT_RULES.batteryPerTurn + 1);
+  });
+
+  it('기한이 있는 이상 현상은 그 턴에 사라지고, 사라지기 전까지만 위험도를 올린다', () => {
+    const night: NightDef = { ...NIGHT, endTurn: 9, anomalies: [{ ...NIGHT.anomalies[0], expiresAtTurn: 2, riskPerTurn: 1 }] };
+    let s = createNight(night, Array(10).fill('lock'), 1);
+    s = endTurn(night, s);
+    s = endTurn(night, s);
+    expect(activeAnomalies(night, s)).toEqual([]);
+    expect(expiredAt(night, s).map((a) => a.id)).toEqual(['smile']);
+    expect(endTurn(night, s).risk).toBe(2);
   });
 });
