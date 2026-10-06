@@ -1,24 +1,35 @@
-import { useState } from 'preact/hooks';
-import { activeAnomalies } from '../core/night';
+import { useEffect, useState } from 'preact/hooks';
+import { chooseReward, newRun, nightSeed, restartRun, settleNight, toggleSuspect, type RunState } from '../core/run';
 import type { NightState } from '../core/types';
-import { NIGHT_1 } from '../data/night1';
+import { REWARD_POOL, STARTER_DECK } from '../data/cards';
+import { LAST_DAY, nightFor } from '../data/nights';
+import { DayScreen } from './DayScreen';
 import { NightScreen } from './NightScreen';
+import { DemoEnd, NightResult, RewardScreen } from './ResultScreens';
 import { Rulebook } from './Rulebook';
-
-type Screen = { name: 'title' } | { name: 'rules' } | { name: 'night'; seed: number } | { name: 'result'; state: NightState; seed: number };
+import { clearRun, loadRun, saveRun } from './storage';
 
 // 화면 쪽에서만 시드를 고른다. 규칙(core)은 받은 시드로만 움직인다.
-// 주소에 ?seed=123 을 붙이면 같은 판을 재현할 수 있다 (QA용).
+// 주소에 ?seed=123 을 붙이면 같은 판을 재현할 수 있다 (QA용, 로컬 개발 서버).
 function newSeed(): number {
   const fixed = Number(new URLSearchParams(location.search).get('seed'));
   return Number.isInteger(fixed) && fixed > 0 ? fixed : Date.now() % 1_000_000;
 }
 
-export function App() {
-  const [screen, setScreen] = useState<Screen>({ name: 'title' });
-  const night = NIGHT_1;
+type View = 'title' | 'run' | 'night' | 'result';
 
-  if (screen.name === 'title') {
+export function App() {
+  const [saved] = useState(loadRun);
+  const canContinue = saved !== null && (saved.phase === 'day' || saved.phase === 'reward');
+  const [run, setRun] = useState<RunState | null>(null);
+  const [view, setView] = useState<View>('title');
+  const [lastNight, setLastNight] = useState<NightState | null>(null);
+
+  useEffect(() => {
+    if (run) saveRun(run);
+  }, [run]);
+
+  if (view === 'title' || !run) {
     return (
       <main class="screen title">
         <div class="moon" aria-hidden="true" />
@@ -26,52 +37,69 @@ export function App() {
         <div class="sub">
           야간 경비원 모집 · 시급 높음 · 경력 무관
           <br />
-          체험판 · 1일차 밤
+          체험판 · 1~{LAST_DAY}일차
         </div>
-        <button type="button" class="btn-main" onClick={() => setScreen({ name: 'rules' })}>출근하기</button>
-      </main>
-    );
-  }
-
-  if (screen.name === 'rules') {
-    return (
-      <main class="screen">
-        <div class="rule-label">NIGHT 0{night.day} · 근무 전 확인</div>
-        <Rulebook night={night} />
-        <div style={{ flex: 1 }} />
-        <button type="button" class="btn-main" onClick={() => setScreen({ name: 'night', seed: newSeed() })}>
-          수칙을 확인했습니다 · 근무 시작
+        {canContinue && (
+          <button type="button" class="btn-main" onClick={() => { setRun(saved); setView('run'); }}>
+            이어하기 · {saved.day}일차 {saved.phase === 'reward' ? '보상' : '낮'}
+          </button>
+        )}
+        <button
+          type="button"
+          class={canContinue ? 'btn-sub' : 'btn-main'}
+          onClick={() => { clearRun(); setRun(newRun(STARTER_DECK, newSeed())); setView('run'); }}
+        >
+          {canContinue ? '처음부터 출근하기' : '출근하기'}
         </button>
       </main>
     );
   }
 
-  if (screen.name === 'night') {
-    return <NightScreen key={screen.seed} night={night} seed={screen.seed} onFinish={(state) => setScreen({ name: 'result', state, seed: screen.seed })} />;
+  if (view === 'night') {
+    return (
+      <NightScreen
+        key={`${run.loop}-${run.day}`}
+        night={nightFor(run.day)}
+        deck={run.deck}
+        seed={nightSeed(run)}
+        suspected={run.suspected}
+        onFinish={(state) => {
+          setLastNight(state);
+          setRun(settleNight(run, nightFor(run.day), state, REWARD_POOL, LAST_DAY));
+          setView('result');
+        }}
+      />
+    );
   }
 
-  const { state } = screen;
-  const survived = state.outcome === 'survived';
-  const appeared = night.anomalies.filter((a) => a.appearsAtTurn < state.turn).length;
-  const missed = activeAnomalies(night, state).length;
-  return (
-    <main class="screen result">
-      <div class="rule-label">{survived ? 'SHIFT CLEAR' : 'SHIFT OVER'}</div>
-      <div class="big" style={{ color: survived ? 'var(--mint)' : 'var(--pink)', animation: survived ? undefined : 'knock 0.4s 3' }}>
-        {survived ? '06:00' : '똑. 똑. 똑.'}
-      </div>
-      <h2>{survived ? '정문이 나타났다.' : '경비실 문을 두드리는 소리가 난다.'}</h2>
-      <div class="pen" style={{ color: survived ? 'var(--muted)' : 'var(--pink)' }}>
-        {survived ? '수고하셨습니다. 내일도 꼭 출근해 주세요.' : '…수습생 님? 문 열어 주세요. 웃는 얼굴로.'}
-      </div>
-      <div class="stats">
-        <span>대응한 이상 현상</span><b>{state.resolved.length} / {appeared}</b>
-        <span>놓친 이상 현상</span><b>{missed}</b>
-        <span>최종 위험도</span><b>{state.risk} / 10</b>
-        <span>근무 번호 (재현용)</span><b>#{screen.seed}</b>
-      </div>
-      <button type="button" class="btn-main" onClick={() => setScreen({ name: 'night', seed: newSeed() })}>다시 근무하기</button>
-      <button type="button" class="btn-sub" onClick={() => setScreen({ name: 'title' })}>타이틀로</button>
-    </main>
-  );
+  if (view === 'result' && lastNight) {
+    return (
+      <NightResult
+        run={run}
+        night={lastNight}
+        onNext={() => {
+          if (run.phase === 'failed') setRun(restartRun(run, STARTER_DECK));
+          setView('run');
+        }}
+      />
+    );
+  }
+
+  if (run.phase === 'reward') return <RewardScreen run={run} onChoose={(id) => setRun(chooseReward(run, id))} />;
+  if (run.phase === 'demo-end') {
+    return <DemoEnd run={run} onRestart={() => { clearRun(); setRun(newRun(STARTER_DECK, newSeed())); }} />;
+  }
+
+  // 낮. 1일차는 숙직실 대신 첫 수칙서만 보여 준다.
+  if (run.day === 1) {
+    return (
+      <main class="screen">
+        <div class="rule-label">NIGHT 01 · 근무 전 확인</div>
+        <Rulebook night={nightFor(1)} />
+        <div style={{ flex: 1 }} />
+        <button type="button" class="btn-main" onClick={() => setView('night')}>수칙을 확인했습니다 · 근무 시작</button>
+      </main>
+    );
+  }
+  return <DayScreen run={run} onToggle={(no) => setRun(toggleSuspect(run, no))} onStart={() => setView('night')} />;
 }

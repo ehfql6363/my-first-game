@@ -11,13 +11,13 @@ interface Props {
 
 export function CameraView({ cameraId, cameraName, code, clock, kinds }: Props) {
   return (
-    <div class="monitor" role="img" aria-label={`${code} ${cameraName} 화면`}>
+    <div class="monitor" role="img" aria-label={`${code} ${cameraName} 화면`} data-kinds={kinds.join(' ')}>
       <div class="scene">
         <div class="abs" style={{ left: '50%', top: '0px', width: '358px', height: '270px', marginLeft: '-179px' }}>
-          {cameraId === 'gate' && <Gate />}
+          {cameraId === 'gate' && <Gate taeo={kinds.includes('taeo')} />}
           {cameraId === 'ticket' && <Ticket balloon={kinds.includes('balloon')} />}
-          {cameraId === 'carousel' && <Carousel smile={kinds.includes('smile')} />}
-          {cameraId === 'broadcast' && <Broadcast onAir={kinds.includes('namecall')} />}
+          {cameraId === 'carousel' && <Carousel smile={kinds.includes('smile')} horse13={kinds.includes('horse13')} />}
+          {cameraId === 'broadcast' && <Broadcast onAir={kinds.includes('namecall')} reverse={kinds.includes('reverse')} />}
         </div>
       </div>
       <div class="band" />
@@ -33,10 +33,16 @@ export function CameraView({ cameraId, cameraName, code, clock, kinds }: Props) 
 
 const ground = <div class="abs" style={{ left: '0px', right: '0px', bottom: '0px', height: '64px', background: 'var(--cctv-1)' }} />;
 
-function Gate() {
+function Gate({ taeo }: { taeo: boolean }) {
   return (
     <>
       {ground}
+      {taeo && (
+        <>
+          <div class="abs" style={{ left: '140px', top: '170px', width: '12px', height: '30px', background: '#a07bd6', boxShadow: 'inset 0 9px 0 0 #dcd0f0' }} />
+          <div class="caption" style={{ top: '40px', color: 'var(--paper)' }}>한태오: "저 먼저 퇴근할게요 ㅎㅎ"</div>
+        </>
+      )}
       <div class="abs" style={{ left: '109px', top: '60px', width: '140px', height: '146px', border: '3px dashed var(--cctv-3)', borderBottom: '0px', borderRadius: '70px 70px 0 0' }} />
       <div class="abs" style={{ left: '173px', top: '172px', width: '12px', height: '26px', background: '#3f8f7a', boxShadow: 'inset 0 7px 0 0 var(--cctv-2)' }} />
       <div class="caption" style={{ top: '222px' }}>정문 없음 (06:00 전) · 인원 1명 감지</div>
@@ -65,7 +71,7 @@ function Ticket({ balloon }: { balloon: boolean }) {
   );
 }
 
-function Carousel({ smile }: { smile: boolean }) {
+function Carousel({ smile, horse13 }: { smile: boolean; horse13: boolean }) {
   const white = '#dfe9e2';
   return (
     <>
@@ -75,6 +81,13 @@ function Carousel({ smile }: { smile: boolean }) {
       <div class="abs" style={{ left: '95px', top: '140px', width: '26px', height: '40px', background: 'var(--cctv-3)' }} />
       <div class="abs" style={{ left: '235px', top: '140px', width: '26px', height: '40px', background: 'var(--cctv-3)' }} />
       <div class="abs" style={{ left: '176px', top: '110px', width: '6px', height: '96px', background: 'var(--cctv-3)' }} />
+      {horse13 && (
+        <>
+          <div class="abs" style={{ left: '128px', top: '150px', width: '22px', height: '36px', background: '#5a8f80' }} />
+          <div class="abs" style={{ left: '124px', top: '144px', width: '14px', height: '12px', background: '#5a8f80' }} />
+          <div class="abs" style={{ left: '127px', top: '147px', width: '3px', height: '3px', background: 'var(--pink)' }} />
+        </>
+      )}
       {smile && (
         <>
           <div class="abs" style={{ left: '155px', top: '122px', width: '48px', height: '48px', borderRadius: '50%', background: white }} />
@@ -91,13 +104,16 @@ function Carousel({ smile }: { smile: boolean }) {
   );
 }
 
-function Broadcast({ onAir }: { onAir: boolean }) {
+function Broadcast({ onAir, reverse }: { onAir: boolean; reverse: boolean }) {
   return (
     <>
       <div class="abs" style={{ left: '60px', top: '160px', width: '240px', height: '50px', background: 'var(--cctv-2)' }} />
       <div class="abs" style={{ left: '176px', top: '110px', width: '6px', height: '50px', background: 'var(--cctv-3)' }} />
       <div class="abs" style={{ left: '166px', top: '90px', width: '26px', height: '30px', borderRadius: '12px', background: 'var(--cctv-4)' }} />
       <div class="abs" style={{ left: '236px', top: '86px', width: '30px', height: '74px', background: '#071512', borderRadius: '15px 15px 0 0', opacity: 0.85 }} />
+      {reverse && (
+        <div class="caption" style={{ top: '64px', color: '#c9a7ff', fontFamily: 'var(--pen)', fontSize: '24px' }}>♪ 드이레퍼 운거즐 ♪ 드이레퍼 운거즐 ♪</div>
+      )}
       {onAir && (
         <>
           <div class="abs" style={{ left: '130px', top: '40px', padding: '4px 10px', background: '#c2304a', color: 'var(--paper)', fontFamily: 'var(--pixel)', fontSize: '14px', animation: 'blink 1.2s steps(1) infinite' }}>ON AIR</div>

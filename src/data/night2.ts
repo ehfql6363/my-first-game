@@ -28,7 +28,7 @@ export const NIGHT_2: NightDef = {
   ],
   anomalies: [
     a('1-smile', 'smile', 'carousel', 1, 'light', 1, '웃는 문루'),
-    a('2-reverse', 'reverse', 'broadcast', 2, 'light', 2, '거꾸로 재생되는 음악'),
+    a('2-reverse', 'reverse', 'broadcast', 2, 'light', 1, '거꾸로 재생되는 음악'),
     a('3-balloon', 'balloon', 'ticket', 2, 'lock', 2, '매표소에 들어간 풍선 인형'),
     // 거짓 수칙(7번): 수칙은 "보내 주라"고 하지만, 정문을 잠가 붙잡으면 단서를 얻는다. 보내도 위험도는 오르지 않는다.
     a('4-taeo', 'taeo', 'gate', 3, 'lock', 0, '먼저 퇴근하려는 한태오', {
@@ -41,7 +41,7 @@ export const NIGHT_2: NightDef = {
     a('6-namecall', 'namecall', 'broadcast', 4, 'ignore', 2, '이름을 부르는 방송'),
     a('7-balloon', 'balloon', 'ticket', 4, 'lock', 2, '매표소에 들어간 풍선 인형'),
     a('8-smile', 'smile', 'carousel', 5, 'light', 2, '웃는 문루'),
-    a('9-reverse', 'reverse', 'broadcast', 6, 'light', 2, '거꾸로 재생되는 음악'),
+    a('9-reverse', 'reverse', 'broadcast', 6, 'light', 1, '거꾸로 재생되는 음악'),
     a('10-horse', 'horse13', 'carousel', 6, 'lock', 2, '열세 번째 말'),
     a('11-balloon', 'balloon', 'ticket', 7, 'lock', 2, '매표소에 들어간 풍선 인형'),
     a('12-smile', 'smile', 'carousel', 7, 'light', 2, '웃는 문루'),

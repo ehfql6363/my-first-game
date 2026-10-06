@@ -1,13 +1,15 @@
 import { useState } from 'preact/hooks';
-import { activeAnomalies, clockText, createNight, endTurn, playCard } from '../core/night';
+import { activeAnomalies, clockText, createNight, endTurn, expiredAt, playCard } from '../core/night';
 import { NIGHT_RULES, type NightDef, type NightState } from '../core/types';
-import { CARDS, STARTER_DECK } from '../data/cards';
+import { CARDS } from '../data/cards';
 import { CameraView } from './CameraView';
 import { Rulebook } from './Rulebook';
 
 interface Props {
   night: NightDef;
+  deck: string[];
   seed: number;
+  suspected: number[];
   onFinish: (state: NightState) => void;
 }
 
@@ -18,8 +20,8 @@ const FAIL_REASON = {
   'bad-index': '',
 } as const;
 
-export function NightScreen({ night, seed, onFinish }: Props) {
-  const [state, setState] = useState(() => createNight(night, STARTER_DECK, seed));
+export function NightScreen({ night, deck, seed, suspected, onFinish }: Props) {
+  const [state, setState] = useState(() => createNight(night, deck, seed));
   const [camIndex, setCamIndex] = useState(0);
   const [msg, setMsg] = useState('근무 시작. 카메라를 넘겨 보며 수칙대로 대응하십시오.');
   const [showRules, setShowRules] = useState(false);
@@ -37,7 +39,7 @@ export function NightScreen({ night, seed, onFinish }: Props) {
     setState(r.state);
     const card = CARDS[state.hand[index]];
     if (card.response === 'zoom') setMsg('모든 카메라의 이상 유무가 표시됐다. 이번 턴만.');
-    else if (r.resolvedAnomaly) setMsg(`대응 성공: ${r.resolvedAnomaly.name}.`);
+    else if (r.resolvedAnomaly) setMsg(r.resolvedAnomaly.resolvedText ?? `대응 성공: ${r.resolvedAnomaly.name}.`);
     else setMsg(`${cam.name}에 [${card.name}]. 아무 일도 일어나지 않았다.`);
   }
 
@@ -50,7 +52,9 @@ export function NightScreen({ night, seed, onFinish }: Props) {
       return;
     }
     const passed = `${night.minutesPerTurn}분이 지났다.`;
-    setMsg(gained > 0 ? `${passed} 어딘가에서 웃음소리가 커진다. 위험도 +${gained}` : `${passed} 조용하다. …너무 조용하다.`);
+    const gone = expiredAt(night, next).map((a) => a.expiredText).filter(Boolean).join(' ');
+    const base = gained > 0 ? `${passed} 어딘가에서 웃음소리가 커진다. 위험도 +${gained}` : `${passed} 조용하다. …너무 조용하다.`;
+    setMsg(gone ? `${base} ${gone}` : base);
   }
 
   return (
@@ -79,9 +83,11 @@ export function NightScreen({ night, seed, onFinish }: Props) {
       </div>
 
       <button type="button" class="rule-strip" onClick={() => setShowRules(true)}>
-        {night.rules.filter((r) => r.short).map((r) => (
-          <div key={r.no}><b>{r.no}.</b> {r.short}</div>
-        ))}
+        <div class="strip-rules">
+          {night.rules.filter((r) => r.short).map((r) => (
+            <div key={r.no} class={suspected.includes(r.no) ? 'suspect' : undefined}><b>{r.no}.</b> {r.short}</div>
+          ))}
+        </div>
         <small>눌러서 수칙서 전체 보기</small>
       </button>
 
@@ -125,7 +131,7 @@ export function NightScreen({ night, seed, onFinish }: Props) {
       {showRules && (
         <div class="overlay" role="dialog" aria-modal="true" aria-label="수칙서" onClick={() => setShowRules(false)}>
           <div style={{ width: '100%', maxWidth: '398px', display: 'flex', flexDirection: 'column', gap: '12px' }} onClick={(e) => e.stopPropagation()}>
-            <Rulebook night={night} />
+            <Rulebook night={night} suspected={suspected} />
             <button type="button" class="btn-sub" onClick={() => setShowRules(false)}>닫기</button>
           </div>
         </div>

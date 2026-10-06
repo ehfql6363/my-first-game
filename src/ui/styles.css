@@ -198,3 +198,41 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* 수칙 의심 표시 */
+.rule-row { display: flex; gap: 8px; align-items: center; }
+.rule-row > span { flex: 1; min-width: 0; }
+.suspect { color: var(--pen-red); text-decoration: line-through; text-decoration-thickness: 2px; }
+.mark { flex-shrink: 0; width: 52px; min-height: 44px; border: 0; cursor: pointer; font-size: 12px; font-weight: 700; background: #ddd2b6; color: var(--ink); }
+.mark.on { background: var(--pen-red); color: var(--paper); }
+.memo { color: var(--pen-red); font-size: 21px; transform: rotate(-1.5deg); }
+.rule-strip .suspect { color: var(--pen-red); }
+
+/* 숙직실 */
+.day { background: #2a2140; height: 100dvh; }
+.day .label { font-family: var(--pixel); font-size: 13px; color: #ffb877; letter-spacing: 2px; }
+.window { position: relative; height: 96px; flex-shrink: 0; background: #f2a65a; box-shadow: 0 0 0 5px #4a3a2a, 0 0 0 8px var(--deep); overflow: hidden; }
+.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tab { min-height: 44px; border: 0; cursor: pointer; font-size: 13px; font-weight: 700; background: #3b3060; color: var(--paper); box-shadow: 0 0 0 2px var(--deep); }
+.tab[aria-selected='true'] { background: #ffb877; color: var(--ink); }
+.day-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px; margin: -4px; }
+.people { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.person { min-height: 92px; border: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--paper); background: #231b38; box-shadow: 0 0 0 2px var(--deep); font-size: 12px; }
+.person[aria-pressed='true'] { background: #3b3060; box-shadow: 0 0 0 2px #ffb877; }
+.face { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--deep); font-weight: 700; box-shadow: 0 0 0 3px var(--deep); }
+.talk { background: var(--deep); padding: 14px; box-shadow: 0 0 0 3px #3b3060; display: flex; flex-direction: column; gap: 12px; }
+.talk p { margin: 0; min-height: 66px; font-size: 14px; line-height: 1.6; }
+.deck-list { display: flex; flex-direction: column; gap: 6px; }
+.deck-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--paper); color: var(--ink); box-shadow: inset 4px 0 0 0 var(--paper-edge); font-size: 13px; }
+.deck-row.gear { box-shadow: inset 4px 0 0 0 #4f8dff; }
+.deck-row.curse { background: #2a1f4d; color: var(--pink); box-shadow: inset 4px 0 0 0 var(--pink); }
+.deck-row small { display: block; font-size: 10px; color: var(--ink-soft); }
+.clue { background: var(--paper); color: var(--ink); padding: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 0 0 3px var(--deep); }
+.clue b { display: block; margin-bottom: 4px; }
+
+/* 보상 */
+.rewards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rewards .card { min-height: 140px; }
+.rewards .card[aria-pressed='true'] { box-shadow: 0 0 0 3px var(--mint), inset 0 -4px 0 0 var(--paper-edge); transform: translateY(-6px); }
+.money { font-family: var(--pixel); color: var(--gold); }
+.strip-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 10px; font-size: 11px; word-break: keep-all; }

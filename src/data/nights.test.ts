@@ -6,11 +6,11 @@ import { CLUES } from './clues';
 import { NIGHTS } from './nights';
 
 // 수칙서를 그대로 믿고 성실히 대응하는 플레이어 흉내 (거짓 수칙이 걸린 이상 현상은 건드리지 않는다).
-function playByTheBook(night: NightDef, deck: string[], seed: number): NightState {
+function playByTheBook(night: NightDef, deck: string[], seed: number, chaseClues = false): NightState {
   let s = createNight(night, deck, seed);
   while (s.outcome === 'playing') {
     for (const a of activeAnomalies(night, s)) {
-      if (a.clue) continue;
+      if (a.clue && !chaseClues) continue;
       const idx = s.hand.findIndex((id) => CARDS[id].response === a.requires);
       if (idx < 0) continue;
       const r = playCard(night, CARDS, s, idx, a.cameraId);
@@ -21,9 +21,9 @@ function playByTheBook(night: NightDef, deck: string[], seed: number): NightStat
   return s;
 }
 
-function survivalRate(night: NightDef, deck: string[]): number {
+function survivalRate(night: NightDef, deck: string[], chaseClues = false): number {
   let ok = 0;
-  for (let seed = 1; seed <= 200; seed++) if (playByTheBook(night, deck, seed).outcome === 'survived') ok++;
+  for (let seed = 1; seed <= 200; seed++) if (playByTheBook(night, deck, seed, chaseClues).outcome === 'survived') ok++;
   return ok / 200;
 }
 
@@ -64,6 +64,10 @@ describe('밸런스', () => {
       expect(rate, reward).toBeGreaterThanOrEqual(0.8);
       expect(rate, reward).toBeLessThan(1.0001);
     }
+  });
+
+  it('2일차: 거짓 수칙을 간파해 단서를 챙겨도 80% 이상 생존 (대가는 있지만 함정은 아니다)', () => {
+    for (const reward of REWARD_POOL) expect(survivalRate(NIGHTS[1], [...STARTER_DECK, reward], true), reward).toBeGreaterThanOrEqual(0.8);
   });
 
   it('보상 카드는 모두 존재하는 카드다', () => {
