@@ -9,6 +9,7 @@
   - 개발: Vite + TypeScript + Preact + Vitest 세팅. `src/core/night.ts` 밤 턴 규칙(카드 사용, 턴 종료, 위험도, 생존/실패)과 테스트 9개. 1일차 데이터 초안.
 - 결정
   - 엔진 대신 웹 UI(Preact) 방식. Unity·Godot 등과 비교 설명 후 사용자 확정. 밤은 턴제.
+  - 클라우드 세션 시작 시 `npm install` 자동 실행 훅 추가 (`.claude/hooks/session-start.sh`)
 - 다음 할 일 (M1)
   - 밤 경비실 화면을 `src/ui/`에 구현 (목업 Night 화면 기준)
   - 1일차 이상 현상 데이터 확정 (기획)
