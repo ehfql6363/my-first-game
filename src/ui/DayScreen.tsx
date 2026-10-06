@@ -1,7 +1,10 @@
 import { useState } from 'preact/hooks';
-import type { RunState } from '../core/run';
+import { RELIC_SLOTS, toggleEquip, visibleLoopMemos, type RunState } from '../core/run';
 import { CARDS } from '../data/cards';
 import { CLUES } from '../data/clues';
+import { COMPANIONS } from '../data/companions';
+import { RELICS } from '../data/relics';
+import { CapsuleTab } from './CapsuleTab';
 import { SPEAKERS } from '../data/dialogue';
 import { nightFor } from '../data/nights';
 import { Rulebook } from './Rulebook';
@@ -9,12 +12,13 @@ import { Rulebook } from './Rulebook';
 interface Props {
   run: RunState;
   onToggle: (ruleNo: number) => void;
+  onChange: (run: RunState) => void;
   onStart: () => void;
 }
 
-const TABS = ['준비', '동료와 대화', '덱·단서'] as const;
+const TABS = ['준비', '대화', '덱·기념품', '캡슐 기계'] as const;
 
-export function DayScreen({ run, onToggle, onStart }: Props) {
+export function DayScreen({ run, onToggle, onChange, onStart }: Props) {
   const [tab, setTab] = useState(0);
   const night = nightFor(run.day);
 
@@ -39,7 +43,7 @@ export function DayScreen({ run, onToggle, onStart }: Props) {
         <div class="abs pen" style={{ left: '12px', top: '6px', width: '42%', fontSize: '18px', lineHeight: 1.05, color: '#4a2a1a', transform: 'rotate(-3deg)' }}>정문이 안 보여. 해도 안 움직여.</div>
       </div>
 
-      <div class="tabs" role="tablist" aria-label="숙직실">
+      <div class="tabs four" role="tablist" aria-label="숙직실">
         {TABS.map((t, i) => (
           <button type="button" role="tab" key={t} class="tab" aria-selected={tab === i} onClick={() => setTab(i)}>{t}</button>
         ))}
@@ -49,11 +53,12 @@ export function DayScreen({ run, onToggle, onStart }: Props) {
         {tab === 0 && (
           <>
             <div style={{ fontSize: '12px', color: '#d9cbe8', lineHeight: 1.5 }}>오늘 밤 수칙서를 미리 읽고, 믿을 수 없는 수칙에 표시해 두세요. 표시는 근무 중 수칙 띠에 빨간 줄로 보입니다.</div>
-            <Rulebook night={night} suspected={run.suspected} onToggle={onToggle} />
+            <Rulebook night={night} suspected={run.suspected} onToggle={onToggle} myMemos={visibleLoopMemos(night, run)} />
           </>
         )}
-        {tab === 1 && <Talk day={run.day} />}
-        {tab === 2 && <DeckAndClues run={run} />}
+        {tab === 1 && <Talk day={run.day} owned={run.owned} />}
+        {tab === 2 && <DeckAndClues run={run} onChange={onChange} />}
+        {tab === 3 && <CapsuleTab run={run} onChange={onChange} />}
       </div>
 
       <button type="button" class="btn-main" onClick={onStart}>근무 시작 · 00:00</button>
@@ -61,8 +66,11 @@ export function DayScreen({ run, onToggle, onStart }: Props) {
   );
 }
 
-function Talk({ day }: { day: number }) {
-  const people = SPEAKERS.filter((p) => p.lines[day]);
+function Talk({ day, owned }: { day: number; owned: string[] }) {
+  const rescued = Object.values(COMPANIONS)
+    .filter((c) => owned.includes(c.id))
+    .map((c) => ({ id: c.id, name: c.name, tag: c.tag, color: c.color, lines: { [day]: c.lines } as Record<number, string[]> }));
+  const people = [...SPEAKERS.filter((p) => p.lines[day]), ...rescued];
   const [who, setWho] = useState(0);
   const [line, setLine] = useState(0);
   if (people.length === 0) return <div class="talk"><p>숙직실에 아무도 없다. 의자가 하나 더 놓여 있다.</p></div>;
@@ -93,7 +101,8 @@ function Talk({ day }: { day: number }) {
   );
 }
 
-function DeckAndClues({ run }: { run: RunState }) {
+function DeckAndClues({ run, onChange }: { run: RunState; onChange: (run: RunState) => void }) {
+  const relics = run.owned.filter((id) => RELICS[id]);
   const counts = new Map<string, number>();
   for (const id of run.deck) counts.set(id, (counts.get(id) ?? 0) + 1);
   return (
@@ -114,6 +123,25 @@ function DeckAndClues({ run }: { run: RunState }) {
           );
         })}
       </div>
+      <div style={{ fontSize: '12px', fontWeight: 700 }}>기념품 (장착 {run.equipped.length}/{RELIC_SLOTS})</div>
+      {relics.length === 0 && <div style={{ fontSize: '12px', color: '#d9cbe8' }}>아직 없다. 캡슐 기계에서 나온다.</div>}
+      {relics.map((id) => {
+        const r = RELICS[id];
+        const on = run.equipped.includes(id);
+        const full = !on && run.equipped.length >= RELIC_SLOTS;
+        return (
+          <div key={id} class="relic">
+            <div>
+              <b>{r.name}</b> · {r.good}
+              <br />
+              <span class="bad">저주: {r.curse}</span>
+            </div>
+            <button type="button" class={on ? 'mark on' : 'mark'} aria-pressed={on} disabled={full} onClick={() => onChange(toggleEquip(run, id))}>
+              {on ? '장착 중' : full ? '칸 없음' : '장착'}
+            </button>
+          </div>
+        );
+      })}
       <div style={{ fontSize: '12px', fontWeight: 700 }}>단서 {run.clues.length}개</div>
       {run.clues.length === 0 && <div style={{ fontSize: '12px', color: '#d9cbe8' }}>아직 없다. 수칙서를 너무 믿지 않는 편이 좋을지도.</div>}
       {run.clues.map((id) => (

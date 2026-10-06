@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
-import { activeAnomalies, clockText, createNight, endTurn, expiredAt, playCard } from '../core/night';
-import { NIGHT_RULES, type NightDef, type NightState } from '../core/types';
+import { activeAnomalies, batteryPerTurn, clockText, createNight, endTurn, expiredAt, maxRisk, playCard } from '../core/night';
+import { NO_MODS, type NightDef, type NightMods, type NightState } from '../core/types';
 import { CARDS } from '../data/cards';
 import { CameraView } from './CameraView';
 import { Rulebook } from './Rulebook';
@@ -10,6 +10,9 @@ interface Props {
   deck: string[];
   seed: number;
   suspected: number[];
+  mods?: NightMods;
+  relicNames?: string[];
+  myMemos?: string[];
   onFinish: (state: NightState) => void;
 }
 
@@ -20,8 +23,8 @@ const FAIL_REASON = {
   'bad-index': '',
 } as const;
 
-export function NightScreen({ night, deck, seed, suspected, onFinish }: Props) {
-  const [state, setState] = useState(() => createNight(night, deck, seed));
+export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, relicNames = [], myMemos = [], onFinish }: Props) {
+  const [state, setState] = useState(() => createNight(night, deck, seed, mods));
   const [camIndex, setCamIndex] = useState(0);
   const [msg, setMsg] = useState('근무 시작. 카메라를 넘겨 보며 수칙대로 대응하십시오.');
   const [showRules, setShowRules] = useState(false);
@@ -39,6 +42,7 @@ export function NightScreen({ night, deck, seed, suspected, onFinish }: Props) {
     setState(r.state);
     const card = CARDS[state.hand[index]];
     if (card.response === 'zoom') setMsg('모든 카메라의 이상 유무가 표시됐다. 이번 턴만.');
+    else if ((r.resolvedCount ?? 0) > 1) setMsg(`대응 성공: ${r.resolvedCount}건을 한 번에 정리했다.`);
     else if (r.resolvedAnomaly) setMsg(r.resolvedAnomaly.resolvedText ?? `대응 성공: ${r.resolvedAnomaly.name}.`);
     else setMsg(`${cam.name}에 [${card.name}]. 아무 일도 일어나지 않았다.`);
   }
@@ -64,16 +68,16 @@ export function NightScreen({ night, deck, seed, suspected, onFinish }: Props) {
           <div class="rule-label">NIGHT 0{night.day} · 경비실</div>
           <div class="meter">
             배터리
-            {Array.from({ length: NIGHT_RULES.batteryPerTurn }, (_, i) => (
+            {Array.from({ length: Math.max(batteryPerTurn(state), state.battery) }, (_, i) => (
               <div key={i} class={i < state.battery ? 'pip on' : 'pip'} />
             ))}
           </div>
           <div class="meter">
             위험도
-            <div class="risk-bar" role="meter" aria-valuemin={0} aria-valuemax={NIGHT_RULES.maxRisk} aria-valuenow={state.risk} aria-label="위험도">
-              <div style={{ width: `${(state.risk / NIGHT_RULES.maxRisk) * 100}%` }} />
+            <div class="risk-bar" role="meter" aria-valuemin={0} aria-valuemax={maxRisk(state)} aria-valuenow={state.risk} aria-label="위험도">
+              <div style={{ width: `${(state.risk / maxRisk(state)) * 100}%` }} />
             </div>
-            <span style={{ color: 'var(--pink)', fontFamily: 'var(--pixel)' }}>{state.risk}/{NIGHT_RULES.maxRisk}</span>
+            <span style={{ color: 'var(--pink)', fontFamily: 'var(--pixel)' }}>{state.risk}/{maxRisk(state)}</span>
           </div>
         </div>
         <div class="clock">
@@ -82,6 +86,7 @@ export function NightScreen({ night, deck, seed, suspected, onFinish }: Props) {
         </div>
       </div>
 
+      {relicNames.length > 0 && <div class="relic-line">기념품 · {relicNames.join(' · ')}</div>}
       <button type="button" class="rule-strip" onClick={() => setShowRules(true)}>
         <div class="strip-rules">
           {night.rules.filter((r) => r.short).map((r) => (
@@ -131,7 +136,7 @@ export function NightScreen({ night, deck, seed, suspected, onFinish }: Props) {
       {showRules && (
         <div class="overlay" role="dialog" aria-modal="true" aria-label="수칙서" onClick={() => setShowRules(false)}>
           <div style={{ width: '100%', maxWidth: '398px', display: 'flex', flexDirection: 'column', gap: '12px' }} onClick={(e) => e.stopPropagation()}>
-            <Rulebook night={night} suspected={suspected} />
+            <Rulebook night={night} suspected={suspected} myMemos={myMemos} />
             <button type="button" class="btn-sub" onClick={() => setShowRules(false)}>닫기</button>
           </div>
         </div>

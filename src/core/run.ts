@@ -63,6 +63,11 @@ export function startingDeck(starterDeck: string[], owned: string[], table?: Gac
   return [...starterDeck, ...granted];
 }
 
+/** 다시 출근한 회차에서 수칙서에 나타나는 '내 글씨' 메모 */
+export function visibleLoopMemos(night: NightDef, run: Pick<RunState, 'loop' | 'clues'>): string[] {
+  return (night.loopMemos ?? []).filter((m) => run.loop >= m.minLoop && (!m.clue || run.clues.includes(m.clue))).map((m) => m.text);
+}
+
 /** 같은 회차·같은 날이면 같은 밤이 나온다 */
 export function nightSeed(run: RunState): number {
   return (run.seed + run.day * 7919 + run.loop * 104729) >>> 0;

@@ -26,6 +26,7 @@ export function NightResult({ run, night, onNext }: { run: RunState; night: Nigh
       {last?.newClues.map((id) => (
         <div key={id} class="clue"><b>단서 획득 · {CLUES[id].name}</b>{CLUES[id].text}</div>
       ))}
+      {run.phase === 'failed' && <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.6 }}>1일차부터 다시 출근합니다. 수당, 단서, 캡슐 기계에서 얻은 것은 남습니다.</div>}
       <button type="button" class="btn-main" onClick={onNext}>
         {run.phase === 'failed' ? '다시 출근하기' : run.phase === 'demo-end' ? '계속' : '보상 받기'}
       </button>
@@ -75,7 +76,8 @@ export function DemoEnd({ run, onRestart }: { run: RunState; onRestart: () => vo
         <span>출근 횟수</span><b>{run.loop}</b>
       </div>
       {run.clues.length === 0 && <div style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: 1.6 }}>수칙서 뒷면의 손글씨를 다시 읽어 보세요. 놓친 것이 있을지도 모릅니다.</div>}
-      <button type="button" class="btn-main" onClick={onRestart}>처음부터 다시 근무하기</button>
+      <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.6 }}>다시 1일차부터 출근할 수 있습니다. 수당, 단서, 캡슐 기계에서 얻은 것은 남습니다.</div>
+      <button type="button" class="btn-main" onClick={onRestart}>다시 출근하기</button>
     </main>
   );
 }

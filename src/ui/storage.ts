@@ -3,14 +3,18 @@ import type { RunState } from '../core/run';
 import { parseRun, serializeRun } from '../core/save';
 import { CARDS } from '../data/cards';
 import { CLUES } from '../data/clues';
+import { GACHA } from '../data/gacha';
+import { RELICS } from '../data/relics';
 
 const KEY = 'happymoon-land/run';
 const knownCards = new Set(Object.keys(CARDS));
 const knownClues = new Set(Object.keys(CLUES));
+const knownItems = new Set(GACHA.items.map((i) => i.id));
+const relicIds = new Set(Object.keys(RELICS));
 
 export function loadRun(): RunState | null {
   try {
-    return parseRun(localStorage.getItem(KEY), knownCards, knownClues);
+    return parseRun(localStorage.getItem(KEY), knownCards, knownClues, knownItems, relicIds);
   } catch {
     return null;
   }

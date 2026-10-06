@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
-import { chooseReward, newRun, nightSeed, restartRun, settleNight, toggleSuspect, type RunState } from '../core/run';
-import type { NightState } from '../core/types';
+import { chooseReward, newRun, nightSeed, restartRun, settleNight, toggleSuspect, visibleLoopMemos, type RunState } from '../core/run';
+import { combineMods, type NightState } from '../core/types';
 import { REWARD_POOL, STARTER_DECK } from '../data/cards';
+import { GACHA } from '../data/gacha';
+import { RELICS } from '../data/relics';
 import { LAST_DAY, nightFor } from '../data/nights';
 import { DayScreen } from './DayScreen';
 import { NightScreen } from './NightScreen';
@@ -41,19 +43,21 @@ export function App() {
         </div>
         {canContinue && (
           <button type="button" class="btn-main" onClick={() => { setRun(saved); setView('run'); }}>
-            이어하기 · {saved.day}일차 {saved.phase === 'reward' ? '보상' : '낮'}
+            이어하기 · {saved.loop > 1 ? `${saved.loop}번째 출근 · ` : ''}{saved.day}일차 {saved.phase === 'reward' ? '보상' : '낮'}
           </button>
         )}
         <button
           type="button"
           class={canContinue ? 'btn-sub' : 'btn-main'}
-          onClick={() => { clearRun(); setRun(newRun(STARTER_DECK, newSeed())); setView('run'); }}
+          onClick={() => { clearRun(); setRun(newRun(STARTER_DECK, newSeed(), 1, undefined, GACHA)); setView('run'); }}
         >
-          {canContinue ? '처음부터 출근하기' : '출근하기'}
+          {canContinue ? '새로 시작 (저장 삭제)' : '출근하기'}
         </button>
       </main>
     );
   }
+
+  const mods = combineMods(run.equipped.map((id) => RELICS[id].effect));
 
   if (view === 'night') {
     return (
@@ -63,9 +67,12 @@ export function App() {
         deck={run.deck}
         seed={nightSeed(run)}
         suspected={run.suspected}
+        mods={mods}
+        relicNames={run.equipped.map((id) => RELICS[id].name)}
+        myMemos={visibleLoopMemos(nightFor(run.day), run)}
         onFinish={(state) => {
           setLastNight(state);
-          setRun(settleNight(run, nightFor(run.day), state, REWARD_POOL, LAST_DAY));
+          setRun(settleNight(run, nightFor(run.day), state, REWARD_POOL, LAST_DAY, mods.payBonus));
           setView('result');
         }}
       />
@@ -78,7 +85,7 @@ export function App() {
         run={run}
         night={lastNight}
         onNext={() => {
-          if (run.phase === 'failed') setRun(restartRun(run, STARTER_DECK));
+          if (run.phase === 'failed') setRun(restartRun(run, STARTER_DECK, GACHA));
           setView('run');
         }}
       />
@@ -87,7 +94,7 @@ export function App() {
 
   if (run.phase === 'reward') return <RewardScreen run={run} onChoose={(id) => setRun(chooseReward(run, id))} />;
   if (run.phase === 'demo-end') {
-    return <DemoEnd run={run} onRestart={() => { clearRun(); setRun(newRun(STARTER_DECK, newSeed())); }} />;
+    return <DemoEnd run={run} onRestart={() => setRun(restartRun(run, STARTER_DECK, GACHA))} />;
   }
 
   // 낮. 1일차는 숙직실 대신 첫 수칙서만 보여 준다.
@@ -95,11 +102,12 @@ export function App() {
     return (
       <main class="screen">
         <div class="rule-label">NIGHT 01 · 근무 전 확인</div>
-        <Rulebook night={nightFor(1)} />
+        {run.loop > 1 && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{run.loop}번째 출근. 처음 출근하는 기분이다. 분명히.</div>}
+        <Rulebook night={nightFor(1)} myMemos={visibleLoopMemos(nightFor(1), run)} />
         <div style={{ flex: 1 }} />
         <button type="button" class="btn-main" onClick={() => setView('night')}>수칙을 확인했습니다 · 근무 시작</button>
       </main>
     );
   }
-  return <DayScreen run={run} onToggle={(no) => setRun(toggleSuspect(run, no))} onStart={() => setView('night')} />;
+  return <DayScreen run={run} onToggle={(no) => setRun(toggleSuspect(run, no))} onChange={setRun} onStart={() => setView('night')} />;
 }
