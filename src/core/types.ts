@@ -62,6 +62,8 @@ export interface NightDef {
   anomalies: AnomalyDef[];
   /** 수칙서에 보이는 문장. 판정은 anomalies가 한다 */
   rules: RuleText[];
+  /** 수칙서 뒷면 손글씨 */
+  memo?: string;
 }
 
 export type NightOutcome = 'playing' | 'survived' | 'failed';
