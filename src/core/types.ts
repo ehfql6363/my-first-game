@@ -15,6 +15,10 @@ export interface CardDef {
   response?: ResponseId;
   /** 낼 때 얻는 배터리 */
   gainBattery?: number;
+  /** 지금 보는 카메라가 아니어도 대응 (해당 이상 현상이 있는 아무 카메라) */
+  anyCamera?: boolean;
+  /** 지금 보는 카메라의 맞는 이상 현상을 전부 해결 */
+  resolveAll?: boolean;
 }
 
 export interface CameraDef {
@@ -78,8 +82,54 @@ export interface NightState {
   resolved: string[];
   /** 이번 턴에 카메라 확대를 써서 모든 카메라의 이상 유무가 보이는지 */
   revealed: boolean;
+  /** 이 밤에 적용 중인 보정치 (기념품 등) */
+  mods: NightMods;
   outcome: NightOutcome;
   seed: number;
+}
+
+/** 기념품 등이 밤 규칙을 바꾸는 값. 모두 기본값 대비 더하기(+)다 */
+export interface NightMods {
+  handSize: number;
+  batteryPerTurn: number;
+  firstTurnBattery: number;
+  firstTurnHand: number;
+  maxRisk: number;
+  startRisk: number;
+  startRevealed: boolean;
+  /** 수당 배율 보너스 (0.1 = +10%) */
+  payBonus: number;
+  /** 시작 덱에 섞이는 저주 카드 수 */
+  curses: number;
+}
+
+export const NO_MODS: NightMods = {
+  handSize: 0,
+  batteryPerTurn: 0,
+  firstTurnBattery: 0,
+  firstTurnHand: 0,
+  maxRisk: 0,
+  startRisk: 0,
+  startRevealed: false,
+  payBonus: 0,
+  curses: 0,
+};
+
+export function combineMods(list: Partial<NightMods>[]): NightMods {
+  return list.reduce<NightMods>(
+    (acc, m) => ({
+      handSize: acc.handSize + (m.handSize ?? 0),
+      batteryPerTurn: acc.batteryPerTurn + (m.batteryPerTurn ?? 0),
+      firstTurnBattery: acc.firstTurnBattery + (m.firstTurnBattery ?? 0),
+      firstTurnHand: acc.firstTurnHand + (m.firstTurnHand ?? 0),
+      maxRisk: acc.maxRisk + (m.maxRisk ?? 0),
+      startRisk: acc.startRisk + (m.startRisk ?? 0),
+      startRevealed: acc.startRevealed || !!m.startRevealed,
+      payBonus: acc.payBonus + (m.payBonus ?? 0),
+      curses: acc.curses + (m.curses ?? 0),
+    }),
+    NO_MODS,
+  );
 }
 
 export const NIGHT_RULES = {

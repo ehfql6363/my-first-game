@@ -1,12 +1,13 @@
 // 한 회차(7일) 진행. 밤 사이의 상태(덱, 수당, 단서)를 관리한다.
 
+import { drawCapsule, type GachaItem, type GachaTable } from './gacha';
 import { nextRandom, shuffle } from './rng';
 import type { NightDef, NightState } from './types';
 
 export type RunPhase = 'day' | 'reward' | 'failed' | 'demo-end';
 
 export interface RunState {
-  version: 1;
+  version: 2;
   /** 다음에 근무할 날 (1부터) */
   day: number;
   /** 몇 번째 회차인지. 실패하면 1일차부터 다시 시작하고 1 오른다 */
@@ -22,12 +23,44 @@ export interface RunState {
   /** 직전 밤 결과 요약 (보상·실패 화면용) */
   lastNight: { day: number; pay: number; resolved: number; newClues: string[] } | null;
   seed: number;
+  // ── 여기부터는 회차가 바뀌어도 남는다 ──
+  /** 캡슐 기계에서 얻은 것 (카드 아이템은 여러 번 가질 수 있음) */
+  owned: string[];
+  /** 장착한 기념품 (최대 RELIC_SLOTS) */
+  equipped: string[];
+  /** 마지막 금색 이후 뽑은 횟수 (천장) */
+  pity: number;
+  /** 지금까지 뽑은 횟수 (뽑기 시드용) */
+  draws: number;
 }
+
+export const RELIC_SLOTS = 2;
+
+/** 회차가 바뀌어도 남는 것: 수당, 단서, 캡슐 기계에서 얻은 것, 장착, 천장 카운트 */
+type Carry = Pick<RunState, 'money' | 'clues' | 'owned' | 'equipped' | 'pity' | 'draws'>;
+const EMPTY_CARRY: Carry = { money: 0, clues: [], owned: [], equipped: [], pity: 0, draws: 0 };
 
 export const PAY = { base: 50, perResolved: 15 } as const;
 
-export function newRun(starterDeck: string[], seed: number, loop = 1): RunState {
-  return { version: 1, day: 1, loop, phase: 'day', deck: starterDeck.slice(), money: 0, clues: [], suspected: [], rewardOptions: [], lastNight: null, seed };
+export function newRun(starterDeck: string[], seed: number, loop = 1, carry: Carry = EMPTY_CARRY, table?: GachaTable): RunState {
+  return {
+    version: 2,
+    day: 1,
+    loop,
+    phase: 'day',
+    deck: startingDeck(starterDeck, carry.owned, table),
+    suspected: [],
+    rewardOptions: [],
+    lastNight: null,
+    seed,
+    ...carry,
+  };
+}
+
+/** 회차 시작 덱 = 기본 덱 + 캡슐 기계에서 얻은 카드 */
+export function startingDeck(starterDeck: string[], owned: string[], table?: GachaTable): string[] {
+  const granted = table ? owned.map((id) => table.items.find((i) => i.id === id)?.grantsCard).filter((c): c is string => !!c) : [];
+  return [...starterDeck, ...granted];
 }
 
 /** 같은 회차·같은 날이면 같은 밤이 나온다 */
@@ -40,7 +73,7 @@ export function toggleSuspect(run: RunState, ruleNo: number): RunState {
   return { ...run, suspected };
 }
 
-export function settleNight(run: RunState, night: NightDef, result: NightState, rewardPool: string[], lastDay: number): RunState {
+export function settleNight(run: RunState, night: NightDef, result: NightState, rewardPool: string[], lastDay: number, payBonus = 0): RunState {
   if (result.outcome === 'playing') return run;
   if (result.outcome === 'failed') {
     return { ...run, phase: 'failed', lastNight: { day: run.day, pay: 0, resolved: result.resolved.length, newClues: [] } };
@@ -48,7 +81,7 @@ export function settleNight(run: RunState, night: NightDef, result: NightState, 
   const newClues = night.anomalies
     .filter((a) => a.clue && result.resolved.includes(a.id) && !run.clues.includes(a.clue))
     .map((a) => a.clue!);
-  const pay = PAY.base + PAY.perResolved * result.resolved.length;
+  const pay = Math.round((PAY.base + PAY.perResolved * result.resolved.length) * (1 + payBonus));
   const options = pickDistinct(rewardPool, 3, run.seed + run.day * 31 + run.loop);
   return {
     ...run,
@@ -74,9 +107,35 @@ export function chooseReward(run: RunState, cardId: string | null): RunState {
   };
 }
 
-/** 실패 후 다시 출근. 회차가 오르고 1일차부터. (단서 유지는 M3 회차 구조에서) */
-export function restartRun(run: RunState, starterDeck: string[]): RunState {
-  return newRun(starterDeck, run.seed, run.loop + 1);
+/** 실패 후 다시 출근. 회차가 오르고 1일차부터. 수당·단서·캡슐 기계에서 얻은 것은 남는다 */
+export function restartRun(run: RunState, starterDeck: string[], table?: GachaTable): RunState {
+  const { money, clues, owned, equipped, pity, draws } = run;
+  return newRun(starterDeck, run.seed, run.loop + 1, { money, clues, owned, equipped, pity, draws }, table);
+}
+
+export type PullResult = { run: RunState; item: GachaItem; duplicate: boolean };
+
+/** 캡슐 한 번. 수당이 모자라면 null. 이미 가진 동료·기념품이면 일부 환급 */
+export function pullCapsule(run: RunState, table: GachaTable): PullResult | null {
+  if (run.money < table.cost) return null;
+  const { item, pityCount } = drawCapsule(table, run.pity, (run.seed ^ Math.imul(run.draws + 1, 2654435761)) >>> 0);
+  const duplicate = item.kind !== 'card' && run.owned.includes(item.id);
+  const next: RunState = {
+    ...run,
+    money: run.money - table.cost + (duplicate ? table.duplicateRefund : 0),
+    pity: pityCount,
+    draws: run.draws + 1,
+    owned: duplicate ? run.owned : [...run.owned, item.id],
+    deck: !duplicate && item.grantsCard ? [...run.deck, item.grantsCard] : run.deck,
+  };
+  return { run: next, item, duplicate };
+}
+
+/** 기념품 장착/해제. 칸이 꽉 찼으면 변화 없음 */
+export function toggleEquip(run: RunState, relicId: string): RunState {
+  if (run.equipped.includes(relicId)) return { ...run, equipped: run.equipped.filter((r) => r !== relicId) };
+  if (!run.owned.includes(relicId) || run.equipped.length >= RELIC_SLOTS) return run;
+  return { ...run, equipped: [...run.equipped, relicId] };
 }
 
 function pickDistinct(pool: string[], count: number, seed: number): string[] {

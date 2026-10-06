@@ -1,27 +1,42 @@
 // 밤 경비실 턴 진행. 모든 함수는 이전 상태를 바꾸지 않고 새 상태를 돌려준다.
 
 import { shuffle } from './rng';
-import { NIGHT_RULES, type AnomalyDef, type CardDef, type NightDef, type NightState } from './types';
+import { NIGHT_RULES, NO_MODS, type AnomalyDef, type CardDef, type NightDef, type NightMods, type NightState } from './types';
 
 export type PlayResult =
-  | { ok: true; state: NightState; resolvedAnomaly?: AnomalyDef }
+  | { ok: true; state: NightState; resolvedAnomaly?: AnomalyDef; resolvedCount?: number }
   | { ok: false; reason: 'not-playing' | 'cursed' | 'no-battery' | 'bad-index' };
 
-export function createNight(night: NightDef, deck: string[], seed: number): NightState {
-  const [drawPile, nextSeed] = shuffle(deck, seed);
+/** 저주 카드 id. 기념품 저주로 덱에 섞인다 */
+export const CURSE_CARD = 'laughter';
+
+export function maxRisk(state: NightState): number {
+  return NIGHT_RULES.maxRisk + state.mods.maxRisk;
+}
+export function batteryPerTurn(state: NightState): number {
+  return Math.max(1, NIGHT_RULES.batteryPerTurn + state.mods.batteryPerTurn);
+}
+function handSize(mods: NightMods): number {
+  return Math.max(1, NIGHT_RULES.handSize + mods.handSize);
+}
+
+export function createNight(night: NightDef, deck: string[], seed: number, mods: NightMods = NO_MODS): NightState {
+  const full = [...deck, ...Array<string>(mods.curses).fill(CURSE_CARD)];
+  const [drawPile, nextSeed] = shuffle(full, seed);
   const base: NightState = {
     turn: night.startTurn,
-    battery: NIGHT_RULES.batteryPerTurn,
-    risk: 0,
+    battery: Math.max(0, NIGHT_RULES.batteryPerTurn + mods.batteryPerTurn + mods.firstTurnBattery),
+    risk: mods.startRisk,
     hand: [],
     drawPile,
     discard: [],
     resolved: [],
-    revealed: false,
+    revealed: mods.startRevealed,
     outcome: 'playing',
     seed: nextSeed,
+    mods,
   };
-  return draw(base, NIGHT_RULES.handSize);
+  return draw(base, Math.max(1, handSize(mods) + mods.firstTurnHand));
 }
 
 /** 지금 카메라에 떠 있고 아직 대응하지 않은 이상 현상 */
@@ -58,33 +73,35 @@ export function playCard(
 
   if (card.response === 'zoom') return { ok: true, state: { ...next, revealed: true } };
 
-  const target = card.response
-    ? activeAnomalies(night, state).find(
-        (a) => a.cameraId === cameraId && (card.response === 'any' || a.requires === card.response),
+  const matches = card.response
+    ? activeAnomalies(night, state).filter(
+        (a) => (card.anyCamera || a.cameraId === cameraId) && (card.response === 'any' || a.requires === card.response),
       )
-    : undefined;
-  if (target) next = { ...next, resolved: [...next.resolved, target.id] };
-  return { ok: true, state: next, resolvedAnomaly: target };
+    : [];
+  const targets = card.resolveAll ? matches : matches.slice(0, 1);
+  if (targets.length) next = { ...next, resolved: [...next.resolved, ...targets.map((a) => a.id)] };
+  return { ok: true, state: next, resolvedAnomaly: targets[0], resolvedCount: targets.length };
 }
 
 export function endTurn(night: NightDef, state: NightState): NightState {
   if (state.outcome !== 'playing') return state;
   const gained = activeAnomalies(night, state).reduce((sum, a) => sum + a.riskPerTurn, 0);
-  const risk = Math.min(NIGHT_RULES.maxRisk, state.risk + gained);
+  const limit = maxRisk(state);
+  const risk = Math.min(limit, state.risk + gained);
   const turn = state.turn + 1;
-  const outcome = risk >= NIGHT_RULES.maxRisk ? 'failed' : turn >= night.endTurn ? 'survived' : 'playing';
+  const outcome = risk >= limit ? 'failed' : turn >= night.endTurn ? 'survived' : 'playing';
 
   const next: NightState = {
     ...state,
     turn,
     risk,
     outcome,
-    battery: NIGHT_RULES.batteryPerTurn,
+    battery: batteryPerTurn(state),
     revealed: false,
     hand: [],
     discard: [...state.discard, ...state.hand],
   };
-  return outcome === 'playing' ? draw(next, NIGHT_RULES.handSize) : next;
+  return outcome === 'playing' ? draw(next, handSize(state.mods)) : next;
 }
 
 /** 게임 속 시각 "HH:MM" */

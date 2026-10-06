@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { activeAnomalies, clockText, createNight, endTurn, expiredAt, playCard } from './night';
-import type { CardDef } from './types';
+import { combineMods, type CardDef } from './types';
 import { NIGHT_RULES, type NightDef, type NightState } from './types';
 import { CARDS } from '../data/cards';
 
@@ -115,5 +115,31 @@ describe('밤 경비실', () => {
     expect(activeAnomalies(night, s)).toEqual([]);
     expect(expiredAt(night, s).map((a) => a.id)).toEqual(['smile']);
     expect(endTurn(night, s).risk).toBe(2);
+  });
+
+  it('기념품 보정치: 손패·배터리·최대 위험도·시작 위험도·저주 카드가 반영된다', () => {
+    const mods = combineMods([{ handSize: -1, firstTurnBattery: 2, maxRisk: 3, startRisk: 1, curses: 2 }, { batteryPerTurn: 1 }]);
+    const s = createNight(NIGHT, Array(10).fill('lock'), 1, mods);
+    expect(s.hand).toHaveLength(NIGHT_RULES.handSize - 1);
+    expect(s.battery).toBe(NIGHT_RULES.batteryPerTurn + 1 + 2);
+    expect(s.risk).toBe(1);
+    expect([...s.hand, ...s.drawPile].filter((c) => c === 'laughter')).toHaveLength(2);
+    const next = endTurn(NIGHT, s);
+    expect(next.battery).toBe(NIGHT_RULES.batteryPerTurn + 1);
+    expect(endTurn(NIGHT, { ...s, risk: NIGHT_RULES.maxRisk }).outcome).toBe('playing');
+  });
+
+  it('동료 카드: 어느 카메라에서든(anyCamera), 한 번에 전부(resolveAll) 대응', () => {
+    const two: NightDef = { ...NIGHT, anomalies: [NIGHT.anomalies[0], { ...NIGHT.anomalies[0], id: 'smile2' }] };
+    const cards: Record<string, CardDef> = {
+      ...CARDS,
+      haru: { id: 'haru', name: '같은 편인 척', cost: 1, kind: 'ally', response: 'light', anyCamera: true, desc: '' },
+      patrol: { id: 'patrol', name: '대신 순찰', cost: 2, kind: 'ally', response: 'any', resolveAll: true, desc: '' },
+    };
+    const s = withHand(createNight(two, Array(10).fill('lock'), 1), ['haru', 'patrol']);
+    const far = playCard(two, cards, s, 0, 'somewhere-else');
+    expect(far.ok && far.resolvedAnomaly?.id).toBe('smile');
+    const all = playCard(two, cards, s, 1, 'cam');
+    expect(all.ok && all.resolvedCount).toBe(2);
   });
 });

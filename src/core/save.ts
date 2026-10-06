@@ -3,14 +3,23 @@
 import type { RunPhase, RunState } from './run';
 
 const PHASES: RunPhase[] = ['day', 'reward', 'failed', 'demo-end'];
-const LIMITS = { maxDay: 7, maxLoop: 9999, maxDeck: 60, maxMoney: 1_000_000, maxClues: 50, maxRule: 20 } as const;
+const LIMITS = { maxDay: 7, maxLoop: 9999, maxDeck: 80, maxMoney: 1_000_000, maxClues: 50, maxRule: 20, maxOwned: 200, maxPity: 1000, maxDraws: 1_000_000 } as const;
 
 export function serializeRun(run: RunState): string {
   return JSON.stringify(run);
 }
 
-/** 형식이나 범위가 하나라도 맞지 않으면 null (조용히 새 게임으로) */
-export function parseRun(raw: string | null, knownCards: ReadonlySet<string>, knownClues: ReadonlySet<string>): RunState | null {
+/**
+ * 형식이나 범위가 하나라도 맞지 않으면 null (조용히 새 게임으로).
+ * 버전 1(M2) 저장은 캡슐 기계 항목을 비운 채로 옮겨 온다.
+ */
+export function parseRun(
+  raw: string | null,
+  knownCards: ReadonlySet<string>,
+  knownClues: ReadonlySet<string>,
+  knownItems: ReadonlySet<string> = new Set(),
+  relicIds: ReadonlySet<string> = new Set(),
+): RunState | null {
   if (!raw || raw.length > 20_000) return null;
   let d: unknown;
   try {
@@ -18,7 +27,9 @@ export function parseRun(raw: string | null, knownCards: ReadonlySet<string>, kn
   } catch {
     return null;
   }
-  if (!isObj(d) || d.version !== 1) return null;
+  if (!isObj(d) || (d.version !== 1 && d.version !== 2)) return null;
+  if (d.version === 1) d = { ...d, version: 2, owned: [], equipped: [], pity: 0, draws: 0 };
+  if (!isObj(d)) return null;
   const { day, loop, phase, deck, money, clues, suspected, rewardOptions, lastNight, seed } = d;
   if (!isInt(day, 1, LIMITS.maxDay) || !isInt(loop, 1, LIMITS.maxLoop) || !isInt(money, 0, LIMITS.maxMoney) || !isInt(seed, 0, 2 ** 32 - 1)) return null;
   if (typeof phase !== 'string' || !PHASES.includes(phase as RunPhase)) return null;
@@ -27,8 +38,12 @@ export function parseRun(raw: string | null, knownCards: ReadonlySet<string>, kn
   if (!isStrList(rewardOptions, 3, knownCards)) return null;
   if (!Array.isArray(suspected) || suspected.length > LIMITS.maxRule || !suspected.every((n) => isInt(n, 1, LIMITS.maxRule))) return null;
   if (lastNight !== null && !isLastNight(lastNight, knownClues)) return null;
+  const { owned, equipped, pity, draws } = d;
+  if (!isStrList(owned, LIMITS.maxOwned, knownItems)) return null;
+  if (!isStrList(equipped, 2, relicIds) || !equipped.every((r) => owned.includes(r)) || new Set(equipped).size !== equipped.length) return null;
+  if (!isInt(pity, 0, LIMITS.maxPity) || !isInt(draws, 0, LIMITS.maxDraws)) return null;
   return {
-    version: 1,
+    version: 2,
     day,
     loop,
     phase: phase as RunPhase,
@@ -39,6 +54,10 @@ export function parseRun(raw: string | null, knownCards: ReadonlySet<string>, kn
     rewardOptions: rewardOptions.slice(),
     lastNight: lastNight as RunState['lastNight'],
     seed,
+    owned: owned.slice(),
+    equipped: equipped.slice(),
+    pity,
+    draws,
   };
 }
 
