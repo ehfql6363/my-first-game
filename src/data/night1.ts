@@ -1,7 +1,7 @@
 import type { AnomalyDef, NightDef } from '../core/types';
 
 // 1일차 · 수칙은 전부 진실 (튜토리얼 밤). docs/story/rulebooks.md 1일차를 CCTV 방식에 맞게 옮김.
-// 20분 단위 18턴 = 00:00 ~ 06:00
+// 40분 단위 9턴 = 00:00 ~ 06:00 (18턴은 길다는 플레이 피드백으로 줄임)
 
 type Spawn = [turn: number, kind: 'smile' | 'balloon' | 'namecall'];
 
@@ -12,16 +12,13 @@ const KINDS = {
 } as const;
 
 const SCHEDULE: Spawn[] = [
-  [2, 'smile'],
-  [4, 'balloon'],
+  [1, 'smile'],
+  [2, 'balloon'],
+  [3, 'namecall'],
+  [4, 'smile'],
+  [5, 'balloon'],
   [6, 'namecall'],
-  [8, 'smile'],
-  [9, 'balloon'],
-  [11, 'namecall'],
-  [12, 'smile'],
-  [14, 'balloon'],
-  [15, 'namecall'],
-  [16, 'smile'],
+  [7, 'smile'],
 ];
 
 const anomalies: AnomalyDef[] = SCHEDULE.map(([turn, kind], i) => ({
@@ -34,9 +31,9 @@ const anomalies: AnomalyDef[] = SCHEDULE.map(([turn, kind], i) => ({
 export const NIGHT_1: NightDef = {
   id: 'night-1',
   day: 1,
-  minutesPerTurn: 20,
+  minutesPerTurn: 40,
   startTurn: 0,
-  endTurn: 18,
+  endTurn: 9,
   cameras: [
     { id: 'gate', name: '정문 광장' },
     { id: 'ticket', name: '매표소' },
