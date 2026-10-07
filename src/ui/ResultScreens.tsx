@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { TypeLines } from './TypeLines';
 import { canChoose, ENDINGS, type EndingId, type RunState } from '../core/run';
 import type { NightState } from '../core/types';
 import { CARDS } from '../data/cards';
@@ -99,15 +100,21 @@ export function FinaleScreen({ run, onChoose }: { run: RunState; onChoose: (e: E
 
 export function EndingScreen({ run, onRestart, onTitle }: { run: RunState; onRestart: () => void; onTitle: () => void }) {
   const def = ENDING_DEFS[run.lastEnding ?? 'resign'];
+  const [typed, setTyped] = useState(false);
   return (
     <main class={`screen result ending ending-${def.id}`}>
       <div class="rule-label">{def.kind}</div>
       <h2 style={{ fontSize: '32px' }}>{def.title}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '15px', lineHeight: 1.7 }}>
-        {def.lines.map((l) => (
-          <p key={l} style={{ margin: 0 }}>{l}</p>
-        ))}
+        <TypeLines lines={def.lines} onDone={() => setTyped(true)} />
       </div>
+      {def.id === 'closing' && (
+        <div class={typed ? 'park-lights out' : 'park-lights'} aria-hidden="true">
+          {Array.from({ length: 12 }, (_, i) => (
+            <i key={i} style={{ animationDelay: `${0.35 * i}s` }} />
+          ))}
+        </div>
+      )}
       <div class="stats">
         <span>본 엔딩</span><b>{run.endings.length} / {ENDINGS.length}</b>
         <span>모은 단서</span><b>{run.clues.length} / {Object.keys(CLUES).length}</b>

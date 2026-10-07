@@ -12,3 +12,19 @@ describe('도트 스프라이트', () => {
     }
   });
 });
+
+import { ANIMS } from './sprite-frames';
+
+describe('도트 프레임 애니메이션', () => {
+  it.each(Object.entries(ANIMS))('%s: 모든 프레임이 같은 크기이고 팔레트 색만 쓴다', (_, anim) => {
+    const [first] = anim.frames;
+    for (const f of anim.frames) {
+      expect(f.length).toBe(first.length);
+      for (const row of f) {
+        expect(row.length).toBe(first[0].length);
+        for (const ch of row) if (ch !== '.') expect(S.PALETTE[ch]).toBeDefined();
+      }
+    }
+    expect(anim.fps).toBeGreaterThan(0);
+  });
+});

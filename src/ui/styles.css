@@ -283,3 +283,58 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .paper.handwritten ol { font-family: var(--pen); font-size: 22px; color: #2b5fa8; line-height: 1.25; }
 .roster s { color: var(--pen-red); }
 .monitor .march .pixel { position: static; }
+
+/* 캡슐 뽑기 연출 */
+.slot { position: relative; overflow: visible; }
+.knob.turning { animation: knobTurn 0.55s ease-in-out; }
+@keyframes knobTurn { 0% { transform: rotate(0); } 70% { transform: rotate(330deg); } 100% { transform: rotate(360deg); } }
+.machine.shaking .dome { animation: knock 0.18s 4; }
+.falling-ball { position: absolute; left: 14px; width: 32px; height: 32px; border-radius: 50%; box-shadow: inset -5px -5px 0 0 rgba(0, 0, 0, 0.3), 0 0 0 2px var(--deep); animation: ballDrop 0.8s cubic-bezier(0.3, 0, 0.6, 1) forwards; }
+@keyframes ballDrop { 0% { top: -150px; } 60% { top: 4px; } 75% { top: -10px; } 100% { top: 4px; } }
+.pull { animation: popIn 0.35s cubic-bezier(0.2, 1.4, 0.4, 1); }
+@keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.capsule-flash { position: fixed; inset: 0; pointer-events: none; z-index: 20; animation: flash 0.9s ease-out forwards; }
+.flash-gold { background: radial-gradient(circle, rgba(255, 215, 106, 0.85), rgba(255, 215, 106, 0) 70%); }
+.flash-purple { background: radial-gradient(circle, rgba(164, 107, 255, 0.6), rgba(164, 107, 255, 0) 70%); }
+.flash-blue { background: radial-gradient(circle, rgba(79, 141, 255, 0.45), rgba(79, 141, 255, 0) 65%); }
+.flash-black { background: #000; animation: blackout 1.2s ease-out forwards; }
+@keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes blackout { 0%, 40% { opacity: 1; } 100% { opacity: 0; } }
+
+/* 엔딩 타이핑 */
+.typelines { display: flex; flex-direction: column; gap: 12px; cursor: pointer; }
+.caret { animation: blink 0.8s steps(1) infinite; color: var(--mint); }
+.skip { align-self: flex-end; min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--muted); font-size: 12px; text-decoration: underline; cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.typelines p { animation: none; }
+/* 폐장: 공원의 불이 하나씩 꺼진다 */
+.park-lights { display: flex; justify-content: space-between; padding: 8px 4px; }
+.park-lights i { width: 14px; height: 14px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+.park-lights.out i { animation: lightOut 0.5s forwards; }
+@keyframes lightOut { to { background: #2a2f6b; box-shadow: none; } }
+.ending-closing { transition: background 4s; }
+
+/* 카드 연출 */
+.hand { position: relative; }
+.card.deal { animation: deal 0.28s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+/* 끝 프레임에 opacity를 두지 않는다: 낼 수 없는 카드의 흐린 표시(opacity)를 덮어쓰지 않도록 */
+@keyframes deal { 0% { transform: translateY(40px) rotate(-6deg); opacity: 0; } 100% { transform: none; } }
+.card-fly { position: absolute; left: 50%; top: 0; z-index: 5; pointer-events: none; padding: 10px 14px; background: var(--paper); color: var(--ink); font-weight: 700; font-size: 13px; box-shadow: 0 0 0 3px var(--deep); animation: fly 0.6s ease-in forwards; }
+.card-fly.hit { background: var(--mint); }
+@keyframes fly { 0% { transform: translate(-50%, 0) scale(1); opacity: 1; } 100% { transform: translate(-50%, -320px) scale(0.5) rotate(8deg); opacity: 0; } }
+
+/* 화면 전환 */
+.screen { animation: screenIn 0.35s ease-out; }
+@keyframes screenIn { from { opacity: 0; } to { opacity: 1; } }
+.night-in { position: fixed; inset: 0; z-index: 30; pointer-events: none; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--mint); animation: nightIn 1.6s ease-in forwards; }
+.night-in b { font-family: var(--pixel); font-size: 44px; font-weight: 400; }
+.night-in span { font-family: var(--pixel); font-size: 14px; letter-spacing: 3px; color: var(--muted); }
+@keyframes nightIn { 0%, 45% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+.result > * { animation: rise 0.45s ease-out both; }
+.result > *:nth-child(2) { animation-delay: 0.1s; }
+.result > *:nth-child(3) { animation-delay: 0.2s; }
+.result > *:nth-child(4) { animation-delay: 0.3s; }
+.result > *:nth-child(5) { animation-delay: 0.4s; }
+.result > *:nth-child(n + 6) { animation-delay: 0.5s; }
+@keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; } }
+.day .tab { transition: background 0.2s, color 0.2s; }

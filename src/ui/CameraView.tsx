@@ -1,5 +1,6 @@
 // CCTV 화면 한 대. 배경은 CSS 도형, 이상 현상과 인물은 도트 스프라이트.
 import { PixelSprite } from './PixelSprite';
+import { ANIMS } from './sprite-frames';
 import { BALLOON, BATTERY, GHOST, GUARD_BACK, GUARD_FRONT, HORSE, MOONROO, STAR, TAEO } from './sprites';
 
 interface Props {
@@ -52,15 +53,15 @@ function Gate({ kinds, dread }: { kinds: string[]; dread: boolean }) {
       {kinds.includes('exit2') && (
         <div class="abs" style={{ left: '262px', top: '120px', padding: '3px 6px', background: '#1d8a4a', color: '#e8ffe8', fontFamily: 'var(--pixel)', fontSize: '11px', boxShadow: '0 0 12px #2fd36f' }}>EXIT →</div>
       )}
-      {kinds.includes('star') && <PixelSprite sprite={STAR} scale={3} class="creep" style={{ left: '60px', top: '36px' }} />}
+      {kinds.includes('star') && <PixelSprite sprite={STAR} anim={ANIMS.star} scale={3} class="creep" style={{ left: '60px', top: '36px' }} />}
       {taeo && (
         <>
-          <PixelSprite sprite={TAEO} scale={3} style={{ left: '128px', top: '158px' }} />
+          <PixelSprite sprite={TAEO} anim={ANIMS.taeoWalk} scale={3} style={{ left: '128px', top: '158px' }} />
           <div class="caption" style={{ top: '40px', color: 'var(--paper)' }}>한태오: "저 먼저 퇴근할게요 ㅎㅎ"</div>
         </>
       )}
       <div class="abs" style={{ left: '109px', top: '60px', width: '140px', height: '146px', border: '3px dashed var(--cctv-3)', borderBottom: '0px', borderRadius: '70px 70px 0 0' }} />
-      <PixelSprite sprite={facing ? GUARD_FRONT : GUARD_BACK} scale={facing ? 3 : 2} class={facing ? 'creep' : undefined} style={{ left: facing ? '167px' : '171px', top: facing ? '164px' : '178px', opacity: facing ? '1' : '0.75' }} />
+      <PixelSprite sprite={facing ? GUARD_FRONT : GUARD_BACK} anim={facing ? ANIMS.guardStare : undefined} scale={facing ? 3 : 2} class={facing ? 'creep' : undefined} style={{ left: facing ? '167px' : '171px', top: facing ? '164px' : '178px', opacity: facing ? '1' : '0.75' }} />
       {dread && <PixelSprite sprite={GUARD_BACK} scale={2} style={{ left: '205px', top: '178px', opacity: '0.35' }} />}
       <div class="caption" style={{ top: '222px' }}>정문 없음 (06:00 전) · 인원 {dread ? 2 : 1}명 감지</div>
     </>
@@ -74,13 +75,13 @@ function Ticket({ balloon }: { balloon: boolean }) {
       <div class="abs" style={{ left: '120px', top: '96px', width: '120px', height: '110px', background: 'var(--cctv-2)', boxShadow: 'inset 0 24px 0 0 #225848' }} />
       <div class="abs" style={{ left: '140px', top: '136px', width: '80px', height: '32px', background: '#050d0b' }} />
       {balloon ? (
-        <PixelSprite sprite={BALLOON} scale={2} class="sway" style={{ left: '168px', top: '130px' }} />
+        <PixelSprite sprite={BALLOON} anim={ANIMS.balloon} scale={2} class="sway" style={{ left: '168px', top: '130px' }} />
       ) : (
         <div class="abs" style={{ left: '172px', top: '146px', width: '4px', height: '4px', background: 'var(--pink)', boxShadow: '12px 0 0 0 var(--pink)' }} />
       )}
-      <PixelSprite sprite={BALLOON} scale={2} class="sway" style={{ left: '56px', top: '72px', opacity: '0.55', filter: 'grayscale(0.6)' }} />
-      <PixelSprite sprite={BALLOON} scale={2} class="sway" style={{ left: '84px', top: '56px', opacity: '0.55', filter: 'grayscale(0.6)', animationDelay: '-1.3s' }} />
-      {!balloon && <PixelSprite sprite={BALLOON} scale={2} class="sway" style={{ left: '268px', top: '66px', opacity: '0.55', filter: 'grayscale(0.6)', animationDelay: '-0.6s' }} />}
+      <PixelSprite sprite={BALLOON} anim={ANIMS.balloon} scale={2} class="sway" style={{ left: '56px', top: '72px', opacity: '0.55', filter: 'grayscale(0.6)' }} />
+      <PixelSprite sprite={BALLOON} anim={ANIMS.balloon} scale={2} class="sway" style={{ left: '84px', top: '56px', opacity: '0.55', filter: 'grayscale(0.6)', animationDelay: '-1.3s' }} />
+      {!balloon && <PixelSprite sprite={BALLOON} anim={ANIMS.balloon} scale={2} class="sway" style={{ left: '268px', top: '66px', opacity: '0.55', filter: 'grayscale(0.6)', animationDelay: '-0.6s' }} />}
     </>
   );
 }
@@ -95,10 +96,10 @@ function Carousel({ smile, horse13, offer }: { smile: boolean; horse13: boolean;
       <div class="abs" style={{ left: '235px', top: '140px', width: '26px', height: '40px', background: 'var(--cctv-3)' }} />
       <div class="abs" style={{ left: '176px', top: '110px', width: '6px', height: '96px', background: 'var(--cctv-3)' }} />
       {horse13 && <PixelSprite sprite={HORSE} scale={2} style={{ left: '112px', top: '150px' }} />}
-      {smile && <PixelSprite sprite={MOONROO} scale={3} class="creep" style={{ left: '155px', top: '112px' }} />}
+      {smile && <PixelSprite sprite={MOONROO} anim={ANIMS.moonrooIdle} scale={3} class="creep" style={{ left: '155px', top: '112px' }} />}
       {offer && (
         <>
-          <PixelSprite sprite={MOONROO} scale={2} style={{ left: '232px', top: '150px' }} />
+          <PixelSprite sprite={MOONROO} anim={ANIMS.moonrooIdle} scale={2} style={{ left: '232px', top: '150px' }} />
           <PixelSprite sprite={BATTERY} scale={3} class="sway" style={{ left: '210px', top: '160px' }} />
           <div class="caption" style={{ top: '40px', color: 'var(--paper)' }}>문루가 배터리를 내민다</div>
         </>
@@ -134,13 +135,13 @@ function Haunted({ kinds }: { kinds: string[] }) {
       <div class="abs" style={{ left: '70px', top: '70px', width: '218px', height: '136px', background: 'var(--cctv-2)', clipPath: 'polygon(0 30%, 50% 0, 100% 30%, 100% 100%, 0 100%)' }} />
       <div class="abs" style={{ left: '84px', top: '120px', width: '44px', height: '64px', background: '#0d2a24', boxShadow: 'inset 0 0 0 3px var(--cctv-3)' }} />
       {kinds.includes('mirror') ? (
-        <PixelSprite sprite={GUARD_FRONT} scale={3} style={{ left: '94px', top: '128px', filter: 'saturate(0.6)' }} />
+        <PixelSprite sprite={GUARD_FRONT} anim={ANIMS.guardStare} scale={3} style={{ left: '94px', top: '128px', filter: 'saturate(0.6)' }} />
       ) : (
         <PixelSprite sprite={GUARD_BACK} scale={3} style={{ left: '94px', top: '128px', opacity: '0.35', filter: 'grayscale(1)' }} />
       )}
       <div class="abs" style={{ left: '232px', top: '128px', width: '36px', height: '78px', background: kinds.includes('staffdoor') ? '#e8f7c8' : '#0d2a24', boxShadow: 'inset 0 0 0 3px var(--cctv-3)' }} />
       <div class="abs" style={{ left: '226px', top: '114px', fontSize: '9px', color: 'var(--cctv-text)' }}>직원 전용</div>
-      {kinds.includes('ghost') && <PixelSprite sprite={GHOST} scale={3} class="sway" style={{ left: '156px', top: '120px' }} />}
+      {kinds.includes('ghost') && <PixelSprite sprite={GHOST} anim={ANIMS.ghost} scale={3} class="sway" style={{ left: '156px', top: '120px' }} />}
     </>
   );
 }
@@ -159,7 +160,7 @@ function Ferris({ kinds }: { kinds: string[] }) {
       </div>
       <div class="abs" style={{ left: '176px', top: '105px', width: '6px', height: '110px', background: 'var(--cctv-3)' }} />
       {kinds.includes('topcar') && <div class="abs" style={{ left: '164px', top: '14px', width: '30px', height: '20px', background: 'var(--gold)', opacity: '0.7', boxShadow: '0 0 14px var(--gold)' }} />}
-      {kinds.includes('passenger') && <PixelSprite sprite={GUARD_FRONT} scale={2} style={{ left: '240px', top: '92px' }} />}
+      {kinds.includes('passenger') && <PixelSprite sprite={GUARD_FRONT} anim={ANIMS.guardStare} scale={2} style={{ left: '240px', top: '92px' }} />}
       {fast && <div class="caption" style={{ top: '226px', color: 'var(--paper)' }}>회전 속도 이상 · 1바퀴 7초</div>}
     </>
   );
@@ -174,12 +175,12 @@ function Parade({ kinds }: { kinds: string[] }) {
       {marching && (
         <div class="abs march" style={{ left: '0px', top: '112px', display: 'flex', gap: '18px' }}>
           {[0, 1, 2, 3].map((i) => (
-            <PixelSprite key={i} sprite={MOONROO} scale={2} />
+            <PixelSprite key={i} sprite={MOONROO} anim={ANIMS.moonrooMarch} scale={2} />
           ))}
-          {kinds.includes('knownface') && <PixelSprite sprite={TAEO} scale={3} />}
+          {kinds.includes('knownface') && <PixelSprite sprite={TAEO} anim={ANIMS.taeoWalk} scale={3} />}
         </div>
       )}
-      {!marching && kinds.includes('knownface') && <PixelSprite sprite={TAEO} scale={3} style={{ left: '168px', top: '110px' }} />}
+      {!marching && kinds.includes('knownface') && <PixelSprite sprite={TAEO} anim={ANIMS.taeoWalk} scale={3} style={{ left: '168px', top: '110px' }} />}
       {marching && <div class="caption" style={{ top: '40px', color: '#c9a7ff', fontFamily: 'var(--pen)', fontSize: '20px' }}>♪ 즐거운 퍼레이드 ♪</div>}
     </>
   );

@@ -12,6 +12,7 @@ import { EndingScreen, FinaleScreen, NightResult, RewardScreen } from './ResultS
 import { PixelSprite } from './PixelSprite';
 import { Rulebook } from './Rulebook';
 import { SoundToggle } from './SoundToggle';
+import { ANIMS } from './sprite-frames';
 import { MOONROO } from './sprites';
 import { clearRun, loadRun, saveRun } from './storage';
 
@@ -42,7 +43,7 @@ export function App() {
       <main class="screen title">
         <div class="title-art">
           <div class="moon" aria-hidden="true" />
-          <PixelSprite sprite={MOONROO} scale={5} class="creep title-moonroo" />
+          <PixelSprite sprite={MOONROO} anim={ANIMS.moonrooIdle} scale={5} class="creep title-moonroo" />
         </div>
         <h1>해피문 랜드</h1>
         <div class="sub">

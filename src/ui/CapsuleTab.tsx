@@ -1,10 +1,11 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { itemRates, type GachaItem } from '../core/gacha';
 import { grantStoryItem, pullCapsule, type RunState } from '../core/run';
 import { CARDS } from '../data/cards';
 import { COMPANIONS, STORY_COMPANIONS } from '../data/companions';
 import { GACHA, GRADE_COLOR, GRADE_LABEL, STORY_ITEMS } from '../data/gacha';
 import { RELICS } from '../data/relics';
+import { reducedMotion } from './motion';
 import { play as sfx } from './sound';
 
 const BALLS: [string, string, string][] = [
@@ -16,7 +17,34 @@ const BALLS: [string, string, string][] = [
 export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: RunState) => void }) {
   const [last, setLast] = useState<{ item: GachaItem; duplicate: boolean } | null>(null);
   const [showOdds, setShowOdds] = useState(false);
-  const canPull = run.money >= GACHA.cost;
+  /** 연출 단계: 손잡이 돌림 → 캡슐이 떨어짐 → (결과) */
+  const [stage, setStage] = useState<'idle' | 'turn' | 'drop'>('idle');
+  const [ballColor, setBallColor] = useState('');
+  const [flash, setFlash] = useState<'' | 'gold' | 'purple' | 'blue' | 'black'>('');
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+  const busy = stage !== 'idle';
+  const canPull = run.money >= GACHA.cost && !busy;
+
+  /** 결과는 바로 확정(저장)하고, 화면에는 연출이 끝난 뒤 보여 준다 */
+  function animate(item: GachaItem, duplicate: boolean, black = false) {
+    sfx('capsule');
+    setLast(null);
+    const color = black ? '#0b0b12' : GRADE_COLOR[item.grade];
+    const glow = black ? 'black' : item.grade === 'gold' ? 'gold' : item.grade === 'purple' ? 'purple' : item.grade === 'blue' ? 'blue' : '';
+    const reveal = () => {
+      setStage('idle');
+      setFlash(glow);
+      if (item.grade === 'gold' || black) sfx('gold');
+      setLast({ item, duplicate });
+      timers.current.push(window.setTimeout(() => setFlash(''), 900));
+    };
+    if (reducedMotion()) return reveal();
+    setBallColor(color);
+    setStage('turn');
+    timers.current.push(window.setTimeout(() => setStage('drop'), 550));
+    timers.current.push(window.setTimeout(reveal, 1350));
+  }
 
   // 스토리 캡슐 (뽑기 아님): 5일차 특별 근무일의 확정 캡슐, 이름을 알고 모두 구출하면 검은 캡슐
   const taeoReady = run.day >= 5 && !run.owned.includes('taeo-figure');
@@ -24,24 +52,22 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
   const blackReady = run.clues.includes('own-name') && allRescued && !run.owned.includes('dalhee-0');
   function openStory(id: string) {
     const item = STORY_ITEMS.find((i) => i.id === id)!;
-    sfx('capsule');
-    sfx('gold');
-    setLast({ item, duplicate: false });
     onChange(grantStoryItem(run, item));
+    animate(item, false, id === 'dalhee-0');
   }
 
   function pull() {
+    if (busy) return;
     const r = pullCapsule(run, GACHA);
     if (!r) return;
-    sfx('capsule');
-    if (r.item.grade === 'gold') sfx('gold');
-    setLast({ item: r.item, duplicate: r.duplicate });
     onChange(r.run);
+    animate(r.item, r.duplicate);
   }
 
   return (
     <>
-      <div class="machine">
+      {flash && <div class={`capsule-flash flash-${flash}`} aria-hidden="true" />}
+      <div class={busy ? 'machine shaking' : 'machine'}>
         <div class="dome" aria-hidden="true">
           {BALLS.map(([l, t, c], i) => (
             <i key={i} style={{ left: l, top: t, background: c }} />
@@ -49,9 +75,9 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
           <span class="abs pen" style={{ left: '70px', top: '24px', fontSize: '20px', color: '#c9c2e8', transform: 'rotate(-6deg)' }}>꺼내 줘</span>
         </div>
         <div class="base">
-          <div class="slot" />
-          <button type="button" class="knob" disabled={!canPull} aria-label={`캡슐 뽑기, 수당 ${GACHA.cost}`} onClick={pull}>
-            {canPull ? '돌리기' : '수당 부족'}
+          <div class="slot">{stage === 'drop' && <i class="falling-ball" style={{ background: ballColor }} />}</div>
+          <button type="button" class={stage === 'turn' ? 'knob turning' : 'knob'} disabled={!canPull} aria-label={`캡슐 뽑기, 수당 ${GACHA.cost}`} onClick={pull}>
+            {busy ? '덜컥…' : canPull ? '돌리기' : '수당 부족'}
           </button>
         </div>
       </div>
@@ -61,16 +87,16 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
       </div>
 
       {taeoReady && (
-        <button type="button" class="btn-main" style={{ background: '#a46bff' }} onClick={() => openStory('taeo-figure')}>
+        <button type="button" class="btn-main" disabled={busy} style={{ background: '#a46bff' }} onClick={() => openStory('taeo-figure')}>
           특별 근무일 확정 캡슐 열기 (무료)
         </button>
       )}
       {blackReady && (
-        <button type="button" class="btn-main" style={{ background: '#0b0b12', color: 'var(--pink)', boxShadow: '0 0 0 3px var(--pink)' }} onClick={() => openStory('dalhee-0')}>
+        <button type="button" class="btn-main" disabled={busy} style={{ background: '#0b0b12', color: 'var(--pink)', boxShadow: '0 0 0 3px var(--pink)' }} onClick={() => openStory('dalhee-0')}>
           검은 캡슐이 굴러 나왔다
         </button>
       )}
-      {last && <PullResult item={last.item} duplicate={last.duplicate} />}
+      {last && <PullResult key={`${last.item.id}-${run.draws}`} item={last.item} duplicate={last.duplicate} />}
 
       <button type="button" class="btn-sub" aria-expanded={showOdds} onClick={() => setShowOdds(!showOdds)}>
         {showOdds ? '확률 닫기' : '확률 보기'}

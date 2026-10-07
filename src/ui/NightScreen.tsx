@@ -32,6 +32,9 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
   const [msg, setMsg] = useState('근무 시작. 카메라를 넘겨 보며 수칙대로 대응하십시오.');
   const [showRules, setShowRules] = useState(false);
   const [glitch, setGlitch] = useState(false);
+  /** 방금 낸 카드 (날아가는 연출) */
+  const [flying, setFlying] = useState<{ name: string; hit: boolean; n: number } | null>(null);
+  const flyTimer = useRef<number | undefined>(undefined);
   const glitchTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
     return () => {
       stopHum();
       window.clearTimeout(glitchTimer.current);
+      window.clearTimeout(flyTimer.current);
     };
   }, []);
 
@@ -63,6 +67,9 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
     }
     setState(r.state);
     const card = CARDS[state.hand[index]];
+    setFlying({ name: card.name, hit: !!r.resolvedAnomaly, n: (flying?.n ?? 0) + 1 });
+    window.clearTimeout(flyTimer.current);
+    flyTimer.current = window.setTimeout(() => setFlying(null), 600);
     sfx(r.resolvedAnomaly ? 'success' : 'card');
     if (card.response === 'zoom') setMsg('모든 카메라의 이상 유무가 표시됐다. 이번 턴만.');
     else if ((r.resolvedCount ?? 0) > 1) setMsg(`대응 성공: ${r.resolvedCount}건을 한 번에 정리했다.`);
@@ -98,6 +105,10 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
 
   return (
     <div class={dread ? 'screen dread' : 'screen'}>
+      <div class="night-in" aria-hidden="true">
+        <b>{clockText(night, night.startTurn)}</b>
+        <span>NIGHT 0{night.day}</span>
+      </div>
       <div class="hud">
         <div class="hud-left">
           <div class="rule-label">NIGHT 0{night.day} · 경비실</div>
@@ -153,12 +164,26 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
 
       <div style={{ fontSize: '10px', color: 'var(--muted)' }}>카드를 누르면 지금 보는 카메라({cam.name})에 사용합니다.</div>
       <div class="hand">
+        {flying && (
+          <div key={flying.n} class={flying.hit ? 'card-fly hit' : 'card-fly'} aria-hidden="true">
+            {flying.name}
+          </div>
+        )}
         {state.hand.map((id, i) => {
           const c = CARDS[id];
           const cursed = c.cost === null;
           const disabled = !cursed && (c.cost ?? 0) > state.battery;
+          // 같은 카드가 여러 장일 때도 한 장을 내면 나머지는 다시 그리지 않도록: 턴 + 카드 + 몇 번째 같은 카드
+          const nth = state.hand.slice(0, i).filter((x) => x === id).length;
           return (
-            <button type="button" key={`${id}-${i}`} class={cursed ? 'card curse' : 'card'} disabled={disabled} onClick={() => play(i)}>
+            <button
+              type="button"
+              key={`${state.turn}-${id}-${nth}`}
+              class={cursed ? 'card curse deal' : 'card deal'}
+              style={{ animationDelay: `${i * 50}ms` }}
+              disabled={disabled}
+              onClick={() => play(i)}
+            >
               <span class="cost">{cursed ? 'X' : c.cost}</span>
               <span class="name">{c.name}</span>
               <span class="desc">{c.desc}</span>
