@@ -19,6 +19,7 @@
 | `docs/planning/gameplay-v2.md` | 게임 방식: 밤 CCTV + 낮 덱빌딩, 회차 구조 |
 | `docs/planning/story-v1.md` | 세계관, 진실(스포일러), 엔딩 |
 | `docs/planning/gacha-v1.md` | 캡슐 기계, 등급, 풀 |
+| `docs/planning/monetization-v1.md` | 수익 모델 비교와 추천 (프리미엄 + 확장) |
 | `docs/story/rulebooks.md` | 1~7일차 수칙서 원문 + 설계 메모 |
 | `docs/story/companions.md` | 동료 12명 |
 | `docs/design/ui-v0.md` | 팔레트, 글꼴, 화면 목업 링크 |
