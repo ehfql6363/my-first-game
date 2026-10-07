@@ -8,7 +8,10 @@ import { LAST_DAY, nightFor } from '../data/nights';
 import { DayScreen } from './DayScreen';
 import { NightScreen } from './NightScreen';
 import { DemoEnd, NightResult, RewardScreen } from './ResultScreens';
+import { PixelSprite } from './PixelSprite';
 import { Rulebook } from './Rulebook';
+import { SoundToggle } from './SoundToggle';
+import { MOONROO } from './sprites';
 import { clearRun, loadRun, saveRun } from './storage';
 
 // 화면 쪽에서만 시드를 고른다. 규칙(core)은 받은 시드로만 움직인다.
@@ -34,7 +37,10 @@ export function App() {
   if (view === 'title' || !run) {
     return (
       <main class="screen title">
-        <div class="moon" aria-hidden="true" />
+        <div class="title-art">
+          <div class="moon" aria-hidden="true" />
+          <PixelSprite sprite={MOONROO} scale={5} class="creep title-moonroo" />
+        </div>
         <h1>해피문 랜드</h1>
         <div class="sub">
           야간 경비원 모집 · 시급 높음 · 경력 무관
@@ -53,6 +59,7 @@ export function App() {
         >
           {canContinue ? '새로 시작 (저장 삭제)' : '출근하기'}
         </button>
+        <SoundToggle />
       </main>
     );
   }

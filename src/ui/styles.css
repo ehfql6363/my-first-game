@@ -258,3 +258,22 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .relic .bad { color: var(--pen-red); }
 .tabs.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .tabs.four .tab { font-size: 12px; }
+
+/* 도트 스프라이트 */
+.pixel { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.monitor .pixel { position: absolute; }
+.sway { animation: sway 3s ease-in-out infinite; }
+.creep { animation: creep 9s ease-in infinite alternate; }
+@keyframes sway { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes creep { 0%, 70% { transform: scale(1); } 100% { transform: scale(1.12); } }
+.monitor.dread .scene { animation: flick 1.3s infinite; }
+.monitor.dread .vignette { background: radial-gradient(ellipse at center, transparent 35%, rgba(60, 0, 20, 0.85) 100%); }
+
+.sound-toggle { min-height: 44px; min-width: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.monitor.glitch .scene { animation: glitch 0.45s steps(2) 1; }
+@keyframes glitch { 0% { transform: translate(0, 0); filter: none; } 25% { transform: translate(-6px, 2px); filter: hue-rotate(90deg) contrast(1.6); } 50% { transform: translate(5px, -3px); filter: invert(0.2); } 75% { transform: translate(-3px, 0); } 100% { transform: none; filter: none; } }
+.screen.dread .hud { animation: knock 0.5s 2; }
+.screen.dread { box-shadow: inset 0 0 60px rgba(255, 111, 174, 0.18); }
+.title-art { position: relative; width: 140px; height: 120px; }
+.title-art .moon { position: absolute; right: 0; top: 0; }
+.title-moonroo { position: absolute; left: 0; bottom: 0; }

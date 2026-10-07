@@ -1,9 +1,11 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { activeAnomalies, batteryPerTurn, clockText, createNight, endTurn, expiredAt, maxRisk, playCard } from '../core/night';
 import { NO_MODS, type NightDef, type NightMods, type NightState } from '../core/types';
 import { CARDS } from '../data/cards';
 import { CameraView } from './CameraView';
 import { Rulebook } from './Rulebook';
+import { play as sfx, startHum, stopHum } from './sound';
+import { SoundToggle } from './SoundToggle';
 
 interface Props {
   night: NightDef;
@@ -28,19 +30,39 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
   const [camIndex, setCamIndex] = useState(0);
   const [msg, setMsg] = useState('근무 시작. 카메라를 넘겨 보며 수칙대로 대응하십시오.');
   const [showRules, setShowRules] = useState(false);
+  const [glitch, setGlitch] = useState(false);
+  const glitchTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    startHum();
+    return () => {
+      stopHum();
+      window.clearTimeout(glitchTimer.current);
+    };
+  }, []);
+
+  // 위험도가 최대치의 70% 이상이면 화면이 불안정해진다
+  const dread = state.risk >= Math.ceil(maxRisk(state) * 0.7);
 
   const cam = night.cameras[camIndex];
   const active = activeAnomalies(night, state);
   const kindsOn = (camId: string) => active.filter((a) => a.cameraId === camId).map((a) => a.kind);
 
+  function switchCam(i: number) {
+    if (i !== camIndex) sfx('switch');
+    setCamIndex(i);
+  }
+
   function play(index: number) {
     const r = playCard(night, CARDS, state, index, cam.id);
     if (!r.ok) {
+      if (r.reason === 'cursed') sfx('laugh');
       setMsg(FAIL_REASON[r.reason]);
       return;
     }
     setState(r.state);
     const card = CARDS[state.hand[index]];
+    sfx(r.resolvedAnomaly ? 'success' : 'card');
     if (card.response === 'zoom') setMsg('모든 카메라의 이상 유무가 표시됐다. 이번 턴만.');
     else if ((r.resolvedCount ?? 0) > 1) setMsg(`대응 성공: ${r.resolvedCount}건을 한 번에 정리했다.`);
     else if (r.resolvedAnomaly) setMsg(r.resolvedAnomaly.resolvedText ?? `대응 성공: ${r.resolvedAnomaly.name}.`);
@@ -52,17 +74,27 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
     const gained = next.risk - state.risk;
     setState(next);
     if (next.outcome !== 'playing') {
+      sfx(next.outcome === 'failed' ? 'knock' : 'clear');
       onFinish(next);
       return;
     }
+    const appeared = night.anomalies.some((a) => a.appearsAtTurn === next.turn);
+    sfx(appeared ? 'appear' : 'tick');
+    if (appeared) {
+      setGlitch(true);
+      window.clearTimeout(glitchTimer.current);
+      glitchTimer.current = window.setTimeout(() => setGlitch(false), 450);
+    }
+    const nowDread = next.risk >= Math.ceil(maxRisk(next) * 0.7);
     const passed = `${night.minutesPerTurn}분이 지났다.`;
     const gone = expiredAt(night, next).map((a) => a.expiredText).filter(Boolean).join(' ');
     const base = gained > 0 ? `${passed} 어딘가에서 웃음소리가 커진다. 위험도 +${gained}` : `${passed} 조용하다. …너무 조용하다.`;
-    setMsg(gone ? `${base} ${gone}` : base);
+    const warn = nowDread && !dread ? ' 누군가 경비실 쪽으로 걸어온다.' : '';
+    setMsg((gone ? `${base} ${gone}` : base) + warn);
   }
 
   return (
-    <div class="screen">
+    <div class={dread ? 'screen dread' : 'screen'}>
       <div class="hud">
         <div class="hud-left">
           <div class="rule-label">NIGHT 0{night.day} · 경비실</div>
@@ -80,9 +112,12 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
             <span style={{ color: 'var(--pink)', fontFamily: 'var(--pixel)' }}>{state.risk}/{maxRisk(state)}</span>
           </div>
         </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
         <div class="clock">
           <b>{clockText(night, state.turn)}</b>
           <span>06:00까지 {night.endTurn - state.turn}턴</span>
+        </div>
+        <SoundToggle />
         </div>
       </div>
 
@@ -96,13 +131,13 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
         <small>눌러서 수칙서 전체 보기</small>
       </button>
 
-      <CameraView cameraId={cam.id} cameraName={cam.name} code={`CAM 0${camIndex + 1}`} clock={clockText(night, state.turn)} kinds={kindsOn(cam.id)} />
+      <CameraView cameraId={cam.id} cameraName={cam.name} code={`CAM 0${camIndex + 1}`} clock={clockText(night, state.turn)} kinds={kindsOn(cam.id)} dread={dread} glitch={glitch} />
 
       <div class="thumbs">
         {night.cameras.map((c, i) => {
           const bad = kindsOn(c.id).length > 0;
           return (
-            <button type="button" key={c.id} class={i === camIndex ? 'thumb on' : 'thumb'} aria-pressed={i === camIndex} onClick={() => setCamIndex(i)}>
+            <button type="button" key={c.id} class={i === camIndex ? 'thumb on' : 'thumb'} aria-pressed={i === camIndex} onClick={() => switchCam(i)}>
               <span class="code">CAM 0{i + 1}</span>
               <span>{c.name}</span>
               {state.revealed && <span class={bad ? 'flag bad' : 'flag ok'}>{bad ? '이상' : '없음'}</span>}

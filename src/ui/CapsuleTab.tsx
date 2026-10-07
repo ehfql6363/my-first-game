@@ -5,6 +5,7 @@ import { CARDS } from '../data/cards';
 import { COMPANIONS } from '../data/companions';
 import { GACHA, GRADE_COLOR, GRADE_LABEL } from '../data/gacha';
 import { RELICS } from '../data/relics';
+import { play as sfx } from './sound';
 
 const BALLS: [string, string, string][] = [
   ['18px', '96px', GRADE_COLOR.white], ['50px', '110px', GRADE_COLOR.blue], ['82px', '98px', GRADE_COLOR.white], ['114px', '112px', GRADE_COLOR.purple],
@@ -20,6 +21,8 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
   function pull() {
     const r = pullCapsule(run, GACHA);
     if (!r) return;
+    sfx('capsule');
+    if (r.item.grade === 'gold') sfx('gold');
     setLast({ item: r.item, duplicate: r.duplicate });
     onChange(r.run);
   }

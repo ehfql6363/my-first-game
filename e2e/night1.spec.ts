@@ -10,8 +10,14 @@ async function startNight(page: Page, seed = 7) {
 
 const endTurn = (page: Page) => page.getByRole('button', { name: /턴 종료/ }).click();
 
-test('타이틀 → 수칙서 → 경비실 화면이 폰 크기에서 가로로 넘치지 않는다', async ({ page }) => {
+test('타이틀 → 수칙서 → 경비실 화면이 폰 크기에서 가로로 넘치지 않고, 스크립트 오류가 없다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
   await startNight(page);
+  for (let i = 0; i < 3; i++) await endTurn(page);
+  await page.getByRole('button', { name: /CAM 03/ }).click();
+  await page.getByRole('button', { name: /소리/ }).click();
+  expect(errors).toEqual([]);
   await page.screenshot({ path: 'e2e/.results/night-start.png' });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
@@ -38,7 +44,7 @@ test('회전목마의 웃는 문루에 조명 끄기를 쓰면 대응에 성공�
   for (let i = 0; i < 12 && !done; i++) {
     await endTurn(page);
     const light = page.getByRole('button', { name: /조명 끄기/ }).first();
-    if ((await light.count()) && (await page.locator('.monitor [style*="grin"]').count())) {
+    if ((await light.count()) && ((await page.locator('.monitor').getAttribute('data-kinds')) ?? '').includes('smile')) {
       await page.screenshot({ path: 'e2e/.results/night-smile.png' });
       await light.click();
       await expect(page.getByRole('status')).toContainText('대응 성공');
