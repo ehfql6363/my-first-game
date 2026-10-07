@@ -1,6 +1,6 @@
 // 한 회차(7일) 진행. 밤 사이의 상태(덱, 수당, 단서)를 관리한다.
 
-import { drawCapsule, type GachaItem, type GachaTable } from './gacha';
+import { drawCapsule, poolFor, type GachaItem, type GachaTable } from './gacha';
 import { CURSE_CARD } from './night';
 import { nextRandom, shuffle } from './rng';
 import type { NightDef, NightState } from './types';
@@ -144,17 +144,35 @@ export function addClue(run: RunState, clue: string): RunState {
   return run.clues.includes(clue) ? run : { ...run, clues: [...run.clues, clue] };
 }
 
-/**
- * 마지막 밤 뒤의 선택.
- * closing(폐장)은 자기 이름을 알고(own-name 단서), 필요한 동료를 모두 구출했을 때만 고를 수 있다.
- */
-export function canChoose(run: RunState, ending: EndingId, required: { clue: string; owned: string[] }): boolean {
-  if (run.phase !== 'finale') return false;
-  if (ending !== 'closing') return true;
-  return run.clues.includes(required.clue) && required.owned.every((id) => run.owned.includes(id));
+/** 폐장 엔딩 조건: 단서 + 반드시 있어야 하는 동료 + (선택) 어떤 풀에서 몇 명 이상 */
+export interface ClosingRequirement {
+  clue: string;
+  owned: string[];
+  atLeast?: { pool: string[]; count: number };
 }
 
-export function chooseEnding(run: RunState, ending: EndingId, required: { clue: string; owned: string[] }): RunState {
+/** 폐장 엔딩 조건 중 아직 못 채운 것 */
+export function closingShortfall(run: Pick<RunState, 'clues' | 'owned'>, req: ClosingRequirement) {
+  const rescued = req.atLeast ? req.atLeast.pool.filter((id) => run.owned.includes(id)).length : 0;
+  return {
+    clue: !run.clues.includes(req.clue),
+    owned: req.owned.filter((id) => !run.owned.includes(id)),
+    more: req.atLeast ? Math.max(0, req.atLeast.count - rescued) : 0,
+  };
+}
+
+/**
+ * 마지막 밤 뒤의 선택.
+ * closing(폐장)은 자기 이름을 알고(own-name 단서), 필요한 동료를 구출했을 때만 고를 수 있다.
+ */
+export function canChoose(run: RunState, ending: EndingId, required: ClosingRequirement): boolean {
+  if (run.phase !== 'finale') return false;
+  if (ending !== 'closing') return true;
+  const s = closingShortfall(run, required);
+  return !s.clue && s.owned.length === 0 && s.more === 0;
+}
+
+export function chooseEnding(run: RunState, ending: EndingId, required: ClosingRequirement): RunState {
   if (!canChoose(run, ending, required)) return run;
   return { ...run, phase: 'ending', lastEnding: ending, endings: run.endings.includes(ending) ? run.endings : [...run.endings, ending] };
 }
@@ -164,7 +182,7 @@ export type PullResult = { run: RunState; item: GachaItem; duplicate: boolean };
 /** 캡슐 한 번. 수당이 모자라면 null. 이미 가진 동료·기념품이면 일부 환급 */
 export function pullCapsule(run: RunState, table: GachaTable): PullResult | null {
   if (run.money < table.cost) return null;
-  const { item, pityCount } = drawCapsule(table, run.pity, (run.seed ^ Math.imul(run.draws + 1, 2654435761)) >>> 0);
+  const { item, pityCount } = drawCapsule(poolFor(table, run.endings), run.pity, (run.seed ^ Math.imul(run.draws + 1, 2654435761)) >>> 0);
   const duplicate = item.kind !== 'card' && run.owned.includes(item.id);
   const next: RunState = {
     ...run,

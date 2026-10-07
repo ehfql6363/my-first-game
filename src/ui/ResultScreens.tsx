@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { TypeLines } from './TypeLines';
-import { canChoose, ENDINGS, type EndingId, type RunState } from '../core/run';
+import { canChoose, closingShortfall, ENDINGS, type EndingId, type RunState } from '../core/run';
 import type { NightState } from '../core/types';
 import { CARDS } from '../data/cards';
 import { CLUES } from '../data/clues';
@@ -70,7 +70,7 @@ export function RewardScreen({ run, onChoose }: { run: RunState; onChoose: (card
 
 /** 7일차를 버틴 뒤: 엔딩 선택 */
 export function FinaleScreen({ run, onChoose }: { run: RunState; onChoose: (e: EndingId) => void }) {
-  const missing = ALL_COMPANION_IDS.filter((id) => !run.owned.includes(id)).length;
+  const short = closingShortfall(run, CLOSING_REQUIREMENT);
   return (
     <main class="screen result finale">
       <div class="rule-label">06:00 · 마지막 퍼레이드가 멈췄다</div>
@@ -80,7 +80,13 @@ export function FinaleScreen({ run, onChoose }: { run: RunState; onChoose: (e: E
         {ENDINGS.map((id) => {
           const ok = canChoose(run, id, CLOSING_REQUIREMENT);
           if (id === 'closing' && !ok) {
-            const why = [!run.clues.includes('own-name') && '이름을 모른다', missing > 0 && `구출하지 못한 동료 ${missing}명`].filter(Boolean).join(' · ');
+            const why = [
+              short.clue && '이름을 모른다',
+              short.owned.length > 0 && `아직 만나지 못한 존재 ${short.owned.length}`,
+              short.more > 0 && `구출할 캡슐 동료 ${short.more}명 더`,
+            ]
+              .filter(Boolean)
+              .join(' · ');
             return (
               <button type="button" key={id} class="btn-sub" disabled style={{ opacity: 0.5, textAlign: 'left' }}>
                 ████████을 부른다 ({why})

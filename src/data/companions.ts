@@ -11,6 +11,8 @@ export interface CompanionDef {
   /** 캡슐에서 나올 때 첫 대사 */
   capsuleLine: string;
   lines: string[];
+  /** 이 엔딩을 본 뒤에야 캡슐 기계에 나타난다 */
+  unlockEnding?: 'resign' | 'regular' | 'closing';
   /** 숙직실 대화 마지막에 고르는 선택지 (고른 답에 따라 단서) */
   choice?: { prompt: string; options: { label: string; reply: string; clue?: string }[] };
 }
@@ -30,6 +32,42 @@ export const COMPANIONS: Record<string, CompanionDef> = {
     id: 'doyun', name: '박도윤', grade: 'blue', card: 'wrench', color: '#4f8dff', tag: '10년 전 회전목마 정비공',
     capsuleLine: '말은 열두 마리야. 열세 번째 말엔 절대 타지 마. 나처럼.',
     lines: ['보고서를 올렸지. 말이 한 마리 늘었다고. 파쇄기 소리가 아직 들려.', '렌치는 아무 문에나 맞아. 여기 문들은 다 같은 데로 통하거든.', '너, 정문 본 적 있어? 06:00에 나타나는 거 말고. 진짜 정문.'],
+  },
+  // 숙직실 대화의 민지(SPEAKERS 'minji')와 다른 존재: 지난 회차에 남겨진 민지
+  'minji-past': {
+    id: 'minji-past', name: '서민지', grade: 'gold', card: 'rule-reading', color: '#ffb877', tag: '지난 회차에 남은 동기', unlockEnding: 'resign',
+    capsuleLine: '또 왔네? …이번엔 같이 나가는 거지? 그렇지? 그렇지?',
+    lines: ['수칙은 다 외웠어. 여기 있는 동안 할 게 그것밖에 없었거든.', '너 나갈 때 손 흔들었잖아. 나 그거 매일 연습해. 다음엔 같이 흔들려고.', '…탈 속은 생각보다 조용해. 다들 웃고 있어서.'],
+  },
+  oksun: {
+    id: 'oksun', name: '이옥순', grade: 'purple', card: 'salt', color: '#c9c2e8', tag: '10년 전 야간 청소부',
+    capsuleLine: '쓸어도 쓸어도 웃음소리가 쌓여. 너도 좀 쓸어 봐.',
+    lines: ['문마다 소금을 뿌렸지. 마지막 날 밤엔 소금이 다 떨어졌어.', '웃음소리는 쓸면 없어져. 잠깐은.', '문루한테 뭘 받았으면 말해. 소금으로 갚는 법도 있어.'],
+  },
+  haeun: {
+    id: 'haeun', name: '지하은', grade: 'purple', card: 'night-shot', color: '#ff6fae', tag: '공포 유튜버',
+    capsuleLine: '구독, 좋아요, 알림 설정… 아무도 안 눌렀어. 너 저번에도 내 영상에 나왔었는데.',
+    lines: ['마지막 영상 조회수 0. 근데 댓글이 하나 달렸어. "또 왔네?"', '카메라는 거짓말 안 해. 사람이 거짓말하지.', '내 영상에 네가 나와. 매번 같은 옷, 같은 표정으로.'],
+  },
+  sora: {
+    id: 'sora', name: '임소라', grade: 'blue', card: 'first-aid', color: '#6ff2c8', tag: '간호학과 학생',
+    capsuleLine: '다치면 말해요. 여기선 아무도 안 죽어요. …그게 문제지만.',
+    lines: ['등록금 벌러 왔어요. 이번 학기 등록은… 몇 년 전에 끝났겠죠.', '위험도는 숨처럼 쉬어 줘야 돼요. 들이쉬고, 내쉬고.', '아픈 데 없어요? 여기선 아파도 티가 안 나요.'],
+  },
+  boknam: {
+    id: 'boknam', name: '문복남', grade: 'blue', card: 'vanish-trick', color: '#4f8dff', tag: '은퇴 마술사',
+    capsuleLine: '사라지는 마술은 자신 있었는데. 돌아오는 건 못 배웠지.',
+    lines: ['개장 공연 때 저 무대에 섰지. 박수 소리는 아직도 들려. 손이 네 개짜리 박수.', '카드는 보는 데서 뽑는 게 아니야. 안 보는 데서 뽑는 거지.', '자, 아무 카드나 골라 봐. …봐, 또 웃음소리잖아.'],
+  },
+  yuna: {
+    id: 'yuna', name: '최유나', grade: 'white', card: 'lightstick', color: '#ffd76a', tag: '아이돌 연습생',
+    capsuleLine: '웃어야 데뷔한대요. 저 지금 잘 웃고 있어요?',
+    lines: ['퍼레이드 무대에 서면 데뷔시켜 준대요. 방송에서 그랬어요.', '응원봉 불빛은 꺼지지 않아요. 배터리가 없어도.', '언니도 웃어 봐요. 여기선 웃는 사람만 남거든요.'],
+  },
+  gangcheol: {
+    id: 'gangcheol', name: '배강철', grade: 'white', card: 'bare-fist', color: '#efe6cf', tag: '헬스 트레이너',
+    capsuleLine: '괴물도 결국 근육이야. …근데 쟤들은 왜 때려도 말랑해?',
+    lines: ['문은 잠그는 게 아니라 버티는 거야. 어깨로.', '하체를 해야 도망도 가지. 근데 여기선 도망갈 데가 없더라.', '단백질 남은 거 있어? 여기 매점은 솜사탕밖에 안 팔아.'],
   },
 };
 
@@ -58,5 +96,5 @@ export const STORY_COMPANIONS: Record<string, CompanionDef & { unlockDay?: numbe
   },
 };
 
-/** 폐장 엔딩에 필요한 동료: 캡슐 동료 전원 + 스토리 동료 전원 */
+/** 모든 동료 (구출 현황 표시용) */
 export const ALL_COMPANION_IDS = [...Object.keys(COMPANIONS), ...Object.keys(STORY_COMPANIONS)];

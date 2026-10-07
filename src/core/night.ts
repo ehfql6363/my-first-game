@@ -81,6 +81,10 @@ export function playCard(
   if (targets.length) next = { ...next, resolved: [...next.resolved, ...targets.map((a) => a.id)] };
   // 카메라 확대는 대응(확대로 읽어야 하는 단서)과 별개로 이번 턴 모든 카메라를 드러낸다
   if (card.response === 'zoom') next = { ...next, revealed: true };
+  if (card.healRisk) next = { ...next, risk: Math.max(0, next.risk - card.healRisk) };
+  // 태운 저주 카드는 버린 카드 더미로도 가지 않는다 (이번 밤 동안 사라짐)
+  if (card.purgeCurses) next = { ...next, hand: next.hand.filter((id) => cards[id].cost !== null) };
+  if (card.draw) next = draw(next, next.hand.length + card.draw);
   return { ok: true, state: next, resolvedAnomaly: targets[0], resolvedCount: targets.length };
 }
 

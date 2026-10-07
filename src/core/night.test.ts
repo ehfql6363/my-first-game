@@ -166,4 +166,21 @@ describe('밤 경비실', () => {
     expect(r.ok && r.resolvedAnomaly?.id).toBe('wall');
     expect(r.ok && r.state.revealed).toBe(true);
   });
+
+  it('동료 카드 효과: 저주 카드 태우기, 위험도 회복, 카드 더 뽑기', () => {
+    const cards: Record<string, CardDef> = {
+      ...CARDS,
+      salt: { id: 'salt', name: '소금', cost: 1, kind: 'ally', purgeCurses: true, desc: '' },
+      aid: { id: 'aid', name: '응급 처치', cost: 1, kind: 'ally', healRisk: 2, desc: '' },
+      trick: { id: 'trick', name: '마술', cost: 1, kind: 'ally', draw: 2, desc: '' },
+    };
+    const base = createNight(NIGHT, Array(10).fill('lock'), 1);
+    const purged = playCard(NIGHT, cards, withHand(base, ['salt', 'laughter', 'lock', 'laughter']), 0, 'cam');
+    expect(purged.ok && purged.state.hand).toEqual(['lock']);
+    expect(purged.ok && [...purged.state.discard, ...purged.state.drawPile].includes('laughter')).toBe(false);
+    const healed = playCard(NIGHT, cards, { ...withHand(base, ['aid']), risk: 3 }, 0, 'cam');
+    expect(healed.ok && healed.state.risk).toBe(1);
+    const drew = playCard(NIGHT, cards, withHand(base, ['trick']), 0, 'cam');
+    expect(drew.ok && drew.state.hand).toHaveLength(2);
+  });
 });

@@ -19,6 +19,12 @@ export interface CardDef {
   anyCamera?: boolean;
   /** 지금 보는 카메라의 맞는 이상 현상을 전부 해결 */
   resolveAll?: boolean;
+  /** 손에 든 저주 카드를 이번 밤 동안 태워 없앤다 */
+  purgeCurses?: boolean;
+  /** 위험도를 이만큼 낮춘다 */
+  healRisk?: number;
+  /** 카드를 이만큼 더 뽑는다 */
+  draw?: number;
 }
 
 export interface CameraDef {

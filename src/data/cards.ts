@@ -16,6 +16,13 @@ export const CARDS: Record<string, CardDef> = {
   patrol: { id: 'patrol', name: '대신 순찰', cost: 2, kind: 'ally', response: 'any', resolveAll: true, desc: '김반장. 이 카메라의 이상 현상을 전부 정리한다' },
   'mascot-act': { id: 'mascot-act', name: '같은 편인 척', cost: 1, kind: 'ally', response: 'light', anyCamera: true, desc: '하루. 어느 카메라든 조명 끄기 대응 하나' },
   wrench: { id: 'wrench', name: '렌치', cost: 1, kind: 'ally', response: 'lock', anyCamera: true, desc: '도윤. 어느 카메라든 문 잠그기 대응 하나' },
+  'rule-reading': { id: 'rule-reading', name: '수칙 낭독', cost: 3, kind: 'ally', response: 'any', anyCamera: true, resolveAll: true, desc: '민지. 모든 카메라의 이상 현상을 정리 (보지 마십시오 제외)' },
+  salt: { id: 'salt', name: '소금 뿌리기', cost: 1, kind: 'ally', purgeCurses: true, desc: '이옥순. 손에 든 웃음소리를 태워 이번 밤 동안 없앤다' },
+  'night-shot': { id: 'night-shot', name: '야간 촬영', cost: 0, kind: 'ally', response: 'zoom', anyCamera: true, desc: '하은. 비용 없이 모든 카메라 확인 + 어느 카메라든 확대해 읽기' },
+  'first-aid': { id: 'first-aid', name: '응급 처치', cost: 1, kind: 'ally', healRisk: 2, desc: '소라. 위험도 -2' },
+  'vanish-trick': { id: 'vanish-trick', name: '사라지는 마술', cost: 1, kind: 'ally', draw: 2, desc: '복남. 카드 2장을 더 뽑는다' },
+  lightstick: { id: 'lightstick', name: '응원봉', cost: 1, kind: 'ally', gainBattery: 2, desc: '유나. 배터리 +2 (실질 +1)' },
+  'bare-fist': { id: 'bare-fist', name: '맨주먹', cost: 1, kind: 'ally', response: 'lock', resolveAll: true, desc: '강철. 이 카메라의 문 잠그기 대응을 전부' },
   // 스토리로 얻는 동료 카드 (가챠 아님)
   excuse: { id: 'excuse', name: '핑계 말풍선', cost: 0, kind: 'ally', response: 'ignore', anyCamera: true, desc: '태오. "죄송한데요!" 어느 카메라든 방송 무시 대응 하나' },
   'blank-tag': { id: 'blank-tag', name: '빈 이름표', cost: 1, kind: 'ally', response: 'any', anyCamera: true, desc: '0회차의 나. 어느 카메라든 이상 현상 하나를 지운다' },

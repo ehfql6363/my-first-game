@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GachaTable } from './gacha';
-import { canChoose, chooseEnding, chooseReward, grantStoryItem, newRun, nightSeed, PAY, pullCapsule, RELIC_SLOTS, restartRun, settleNight, toggleEquip, toggleSuspect } from './run';
+import { canChoose, chooseEnding, closingShortfall, chooseReward, grantStoryItem, newRun, nightSeed, PAY, pullCapsule, RELIC_SLOTS, restartRun, settleNight, toggleEquip, toggleSuspect } from './run';
 import { NO_MODS, type NightDef, type NightState } from './types';
 
 const NIGHT: NightDef = {
@@ -143,5 +143,14 @@ describe('엔딩', () => {
     expect(done).toMatchObject({ phase: 'ending', lastEnding: 'resign', endings: ['resign'] });
     expect(chooseEnding(finale, 'closing', REQ)).toBe(finale);
     expect(restartRun(done, ['x']).endings).toEqual(['resign']);
+  });
+
+  it('폐장 조건 "풀에서 N명 이상": 모자란 수를 알려 주고, 채우면 고를 수 있다', () => {
+    const REQ2 = { clue: 'own-name', owned: ['must'], atLeast: { pool: ['a', 'b', 'c'], count: 2 } };
+    const f = { ...newRun(['x'], 1), phase: 'finale' as const, clues: ['own-name'] };
+    expect(closingShortfall({ ...f, owned: ['must', 'a'] }, REQ2)).toEqual({ clue: false, owned: [], more: 1 });
+    expect(canChoose({ ...f, owned: ['must', 'a'] }, 'closing', REQ2)).toBe(false);
+    expect(canChoose({ ...f, owned: ['must', 'a', 'c'] }, 'closing', REQ2)).toBe(true);
+    expect(canChoose({ ...f, owned: ['a', 'b', 'c'] }, 'closing', REQ2)).toBe(false);
   });
 });

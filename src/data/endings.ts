@@ -1,8 +1,17 @@
-import type { EndingId } from '../core/run';
-import { ALL_COMPANION_IDS } from './companions';
+import type { ClosingRequirement, EndingId } from '../core/run';
+import { COMPANIONS } from './companions';
 
-/** 폐장 엔딩 조건: 자기 이름(own-name 단서) + 동료 전원 */
-export const CLOSING_REQUIREMENT = { clue: 'own-name', owned: ALL_COMPANION_IDS };
+/**
+ * 폐장 엔딩 조건: 자기 이름(own-name 단서) + 태오 피규어 + 0회차의 나 + 캡슐 동료 10명 중 6명 이상.
+ * (캡슐 동료 전원은 회차가 너무 많이 걸려서 6명으로. 바꾸려면 count만 고치면 된다)
+ */
+export const CLOSING_REQUIREMENT: ClosingRequirement = {
+  clue: 'own-name',
+  owned: ['taeo-figure', 'dalhee-0'],
+  atLeast: { pool: Object.keys(COMPANIONS), count: 6 },
+};
+/** 검은 캡슐(0회차의 나)이 나오는 조건: 폐장 조건에서 0회차의 나만 뺀 것 */
+export const BLACK_CAPSULE_REQUIREMENT: ClosingRequirement = { ...CLOSING_REQUIREMENT, owned: ['taeo-figure'] };
 
 export interface EndingDef {
   id: EndingId;

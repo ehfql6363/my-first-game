@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { itemRates, type GachaItem } from '../core/gacha';
-import { grantStoryItem, pullCapsule, type RunState } from '../core/run';
+import { itemRates, poolFor, type GachaItem } from '../core/gacha';
+import { closingShortfall, grantStoryItem, pullCapsule, type RunState } from '../core/run';
 import { CARDS } from '../data/cards';
 import { COMPANIONS, STORY_COMPANIONS } from '../data/companions';
+import { BLACK_CAPSULE_REQUIREMENT } from '../data/endings';
 import { GACHA, GRADE_COLOR, GRADE_LABEL, STORY_ITEMS } from '../data/gacha';
 import { RELICS } from '../data/relics';
 import { reducedMotion } from './motion';
@@ -48,8 +49,8 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
 
   // 스토리 캡슐 (뽑기 아님): 5일차 특별 근무일의 확정 캡슐, 이름을 알고 모두 구출하면 검은 캡슐
   const taeoReady = run.day >= 5 && !run.owned.includes('taeo-figure');
-  const allRescued = [...Object.keys(COMPANIONS), 'taeo-figure'].every((id) => run.owned.includes(id));
-  const blackReady = run.clues.includes('own-name') && allRescued && !run.owned.includes('dalhee-0');
+  const black = closingShortfall(run, BLACK_CAPSULE_REQUIREMENT);
+  const blackReady = !black.clue && black.owned.length === 0 && black.more === 0 && !run.owned.includes('dalhee-0');
   function openStory(id: string) {
     const item = STORY_ITEMS.find((i) => i.id === id)!;
     onChange(grantStoryItem(run, item));
@@ -101,7 +102,7 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
       <button type="button" class="btn-sub" aria-expanded={showOdds} onClick={() => setShowOdds(!showOdds)}>
         {showOdds ? '확률 닫기' : '확률 보기'}
       </button>
-      {showOdds && <OddsTable />}
+      {showOdds && <OddsTable endings={run.endings} />}
     </>
   );
 }
@@ -127,13 +128,14 @@ function PullResult({ item, duplicate }: { item: GachaItem; duplicate: boolean }
   );
 }
 
-function OddsTable() {
-  const rows = itemRates(GACHA);
+function OddsTable({ endings }: { endings: string[] }) {
+  const pool = poolFor(GACHA, endings);
+  const rows = itemRates(pool);
   return (
     <div style={{ overflowX: 'auto' }}>
       <table class="odds">
         <caption style={{ textAlign: 'left', fontSize: '11px', color: '#d9cbe8', padding: '4px 0' }}>
-          등급 확률: {Object.entries(GACHA.rates).map(([g, r]) => `${GRADE_LABEL[g as keyof typeof GRADE_LABEL]} ${(r * 100).toFixed(0)}%`).join(' · ')}. 금색 없이 {GACHA.pity}회째에는 금색 확정.
+          등급 확률: {Object.entries(pool.rates).map(([g, r]) => `${GRADE_LABEL[g as keyof typeof GRADE_LABEL]} ${(r * 100).toFixed(0)}%`).join(' · ')}. 금색 없이 {GACHA.pity}회째에는 금색 확정.{pool.items.length < GACHA.items.length ? ' 아직 나오지 않는 것이 있다.' : ''}
         </caption>
         <thead>
           <tr><th>아이템</th><th>등급</th><th>확률</th></tr>

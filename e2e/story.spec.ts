@@ -53,7 +53,7 @@ test('이름을 알고 동료를 모두 구출했다면 폐장 엔딩을 고를 
     day: 7,
     phase: 'finale',
     clues: ['own-name'],
-    owned: ['banjang', 'haru', 'doyun', 'taeo-figure', 'dalhee-0'],
+    owned: ['banjang', 'haru', 'doyun', 'oksun', 'sora', 'yuna', 'taeo-figure', 'dalhee-0'],
   });
   await page.getByRole('button', { name: /내 이름은 윤달희야/ }).click();
   await expect(page.getByText('TRUE END')).toBeVisible();
@@ -61,9 +61,28 @@ test('이름을 알고 동료를 모두 구출했다면 폐장 엔딩을 고를 
   await page.screenshot({ path: 'e2e/.results/story-ending-closing.png', fullPage: true });
 });
 
-test('검은 캡슐: 이름을 알고 캡슐 동료와 태오 피규어를 모두 구출하면 0회차의 나가 나온다', async ({ page }) => {
-  await loadSave(page, { day: 7, clues: ['own-name'], owned: ['banjang', 'haru', 'doyun', 'taeo-figure'] });
+test('검은 캡슐: 이름을 알고 캡슐 동료 6명 이상과 태오 피규어를 구출하면 0회차의 나가 나온다', async ({ page }) => {
+  await loadSave(page, { day: 7, clues: ['own-name'], owned: ['banjang', 'haru', 'doyun', 'oksun', 'sora', 'taeo-figure'] });
+  await page.getByRole('tab', { name: '캡슐 기계' }).click();
+  await expect(page.getByRole('button', { name: '검은 캡슐이 굴러 나왔다' })).toHaveCount(0);
+  await loadSave(page, { day: 7, clues: ['own-name'], owned: ['banjang', 'haru', 'doyun', 'oksun', 'sora', 'yuna', 'taeo-figure'] });
   await page.getByRole('tab', { name: '캡슐 기계' }).click();
   await page.getByRole('button', { name: '검은 캡슐이 굴러 나왔다' }).click();
   await expect(page.getByText('안녕. 너는 몇 번째 나야?', { exact: false })).toBeVisible();
+});
+
+test('폐장 조건이 모자라면 무엇이 모자란지 보여 준다', async ({ page }) => {
+  await loadSave(page, { day: 7, phase: 'finale', clues: ['own-name'], owned: ['banjang', 'haru', 'taeo-figure'] });
+  await expect(page.getByRole('button', { name: /구출할 캡슐 동료 4명 더/ })).toBeDisabled();
+});
+
+test('서민지는 퇴사 엔딩을 본 뒤에야 캡슐 기계 확률표에 나타난다', async ({ page }) => {
+  await loadSave(page, { day: 3 });
+  await page.getByRole('tab', { name: '캡슐 기계' }).click();
+  await page.getByRole('button', { name: '확률 보기' }).click();
+  await expect(page.locator('.odds')).not.toContainText('서민지');
+  await loadSave(page, { day: 3, endings: ['resign'] });
+  await page.getByRole('tab', { name: '캡슐 기계' }).click();
+  await page.getByRole('button', { name: '확률 보기' }).click();
+  await expect(page.locator('.odds')).toContainText('서민지');
 });

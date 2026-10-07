@@ -7,7 +7,7 @@ import { RELICS } from './relics';
 
 const items: GachaItem[] = [
   ...Object.values(RELICS).map((r): GachaItem => ({ id: r.id, name: r.name, grade: r.grade, kind: 'relic' })),
-  ...Object.values(COMPANIONS).map((c): GachaItem => ({ id: c.id, name: c.name, grade: c.grade, kind: 'companion', grantsCard: c.card })),
+  ...Object.values(COMPANIONS).map((c): GachaItem => ({ id: c.id, name: c.name, grade: c.grade, kind: 'companion', grantsCard: c.card, unlockEnding: c.unlockEnding })),
   { id: 'item-coffee', name: '보온병 커피 (카드)', grade: 'white', kind: 'card', grantsCard: 'coffee' },
   { id: 'item-whistle', name: '호루라기 (카드)', grade: 'blue', kind: 'card', grantsCard: 'whistle' },
 ];

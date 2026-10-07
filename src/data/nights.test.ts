@@ -110,8 +110,9 @@ describe('밸런스', () => {
   });
 });
 
-import { itemRates } from '../core/gacha';
+import { itemRates, poolFor } from '../core/gacha';
 import { COMPANIONS } from './companions';
+import { CLOSING_REQUIREMENT } from './endings';
 import { GACHA } from './gacha';
 import { RELICS } from './relics';
 
@@ -133,9 +134,22 @@ describe('캡슐 기계 데이터', () => {
     for (const i of GACHA.items) expect(CLUES[i.id]).toBeUndefined();
   });
 
-  it('동료 3명, 기념품 6개', () => {
-    expect(Object.keys(COMPANIONS)).toHaveLength(3);
-    expect(Object.keys(RELICS)).toHaveLength(6);
+  it('캡슐 동료 10명(+스토리 동료 2명 = 12명), 기념품 14개', () => {
+    expect(Object.keys(COMPANIONS)).toHaveLength(10);
+    expect(Object.keys(STORY_COMPANIONS)).toHaveLength(2);
+    expect(Object.keys(RELICS)).toHaveLength(14);
+  });
+
+  it('동료 카드는 모두 존재하고, 엔딩으로 풀리는 동료는 그 전엔 뽑을 수 없다', () => {
+    for (const c of Object.values(COMPANIONS)) expect(CARDS[c.card], c.id).toBeDefined();
+    expect(poolFor(GACHA, []).items.some((i) => i.id === 'minji-past')).toBe(false);
+    expect(poolFor(GACHA, ['resign']).items.some((i) => i.id === 'minji-past')).toBe(true);
+  });
+
+  it('폐장 조건의 동료 수는 실제 캡슐 동료 수 이하다 (달성 불가능한 조건 금지)', () => {
+    const req = CLOSING_REQUIREMENT.atLeast!;
+    expect(req.count).toBeLessThanOrEqual(req.pool.length);
+    for (const id of CLOSING_REQUIREMENT.owned) expect(STORY_COMPANIONS[id] ?? COMPANIONS[id], id).toBeDefined();
   });
 });
 

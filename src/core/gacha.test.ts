@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drawCapsule, GRADES, itemRates, type GachaTable } from './gacha';
+import { drawCapsule, GRADES, itemRates, poolFor, type GachaTable } from './gacha';
 
 const TABLE: GachaTable = {
   cost: 100,
@@ -52,5 +52,13 @@ describe('캡슐 기계', () => {
       }
       expect(gotGold).toBe(true);
     }
+  });
+
+  it('엔딩으로 풀리는 아이템은 그 엔딩을 보기 전에는 풀과 확률표에 없다', () => {
+    const t: GachaTable = { ...TABLE, items: [...TABLE.items, { id: 'minji', name: '민지', grade: 'gold', kind: 'companion', unlockEnding: 'resign' }] };
+    expect(poolFor(t, []).items.some((i) => i.id === 'minji')).toBe(false);
+    expect(poolFor(t, ['resign']).items.some((i) => i.id === 'minji')).toBe(true);
+    expect(itemRates(poolFor(t, [])).reduce((a, r) => a + r.rate, 0)).toBeCloseTo(1, 10);
+    expect(itemRates(poolFor(t, ['resign'])).reduce((a, r) => a + r.rate, 0)).toBeCloseTo(1, 10);
   });
 });
