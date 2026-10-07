@@ -1,13 +1,17 @@
 // 한 회차(7일) 진행. 밤 사이의 상태(덱, 수당, 단서)를 관리한다.
 
 import { drawCapsule, type GachaItem, type GachaTable } from './gacha';
+import { CURSE_CARD } from './night';
 import { nextRandom, shuffle } from './rng';
 import type { NightDef, NightState } from './types';
 
-export type RunPhase = 'day' | 'reward' | 'failed' | 'demo-end';
+/** finale = 마지막 밤을 버티고 엔딩을 고르는 중, ending = 엔딩을 본 뒤 */
+export type RunPhase = 'day' | 'reward' | 'failed' | 'finale' | 'ending';
+export type EndingId = 'regular' | 'resign' | 'closing';
+export const ENDINGS: EndingId[] = ['regular', 'resign', 'closing'];
 
 export interface RunState {
-  version: 2;
+  version: 3;
   /** 다음에 근무할 날 (1부터) */
   day: number;
   /** 몇 번째 회차인지. 실패하면 1일차부터 다시 시작하고 1 오른다 */
@@ -21,8 +25,12 @@ export interface RunState {
   /** 보상 단계에서 고를 수 있는 카드 */
   rewardOptions: string[];
   /** 직전 밤 결과 요약 (보상·실패 화면용) */
-  lastNight: { day: number; pay: number; resolved: number; newClues: string[] } | null;
+  lastNight: { day: number; pay: number; resolved: number; newClues: string[]; debt: number } | null;
   seed: number;
+  /** 이번 회차의 문루 빚 (문루에게 받은 만큼 저주 카드가 덱에 섞인다) */
+  debt: number;
+  /** 방금 본 엔딩 */
+  lastEnding: EndingId | null;
   // ── 여기부터는 회차가 바뀌어도 남는다 ──
   /** 캡슐 기계에서 얻은 것 (카드 아이템은 여러 번 가질 수 있음) */
   owned: string[];
@@ -32,34 +40,39 @@ export interface RunState {
   pity: number;
   /** 지금까지 뽑은 횟수 (뽑기 시드용) */
   draws: number;
+  /** 본 적 있는 엔딩 */
+  endings: EndingId[];
 }
 
 export const RELIC_SLOTS = 2;
 
 /** 회차가 바뀌어도 남는 것: 수당, 단서, 캡슐 기계에서 얻은 것, 장착, 천장 카운트 */
-type Carry = Pick<RunState, 'money' | 'clues' | 'owned' | 'equipped' | 'pity' | 'draws'>;
-const EMPTY_CARRY: Carry = { money: 0, clues: [], owned: [], equipped: [], pity: 0, draws: 0 };
+type Carry = Pick<RunState, 'money' | 'clues' | 'owned' | 'equipped' | 'pity' | 'draws' | 'endings'>;
+const EMPTY_CARRY: Carry = { money: 0, clues: [], owned: [], equipped: [], pity: 0, draws: 0, endings: [] };
 
 export const PAY = { base: 50, perResolved: 15 } as const;
 
-export function newRun(starterDeck: string[], seed: number, loop = 1, carry: Carry = EMPTY_CARRY, table?: GachaTable): RunState {
+/** items = 카드를 주는 아이템 목록 (캡슐 기계 + 스토리로 얻는 동료) */
+export function newRun(starterDeck: string[], seed: number, loop = 1, carry: Carry = EMPTY_CARRY, items: GachaItem[] = []): RunState {
   return {
-    version: 2,
+    version: 3,
     day: 1,
     loop,
     phase: 'day',
-    deck: startingDeck(starterDeck, carry.owned, table),
+    deck: startingDeck(starterDeck, carry.owned, items),
     suspected: [],
     rewardOptions: [],
     lastNight: null,
     seed,
+    debt: 0,
+    lastEnding: null,
     ...carry,
   };
 }
 
-/** 회차 시작 덱 = 기본 덱 + 캡슐 기계에서 얻은 카드 */
-export function startingDeck(starterDeck: string[], owned: string[], table?: GachaTable): string[] {
-  const granted = table ? owned.map((id) => table.items.find((i) => i.id === id)?.grantsCard).filter((c): c is string => !!c) : [];
+/** 회차 시작 덱 = 기본 덱 + 얻은 아이템이 주는 카드 */
+export function startingDeck(starterDeck: string[], owned: string[], items: GachaItem[] = []): string[] {
+  const granted = owned.map((id) => items.find((i) => i.id === id)?.grantsCard).filter((c): c is string => !!c);
   return [...starterDeck, ...granted];
 }
 
@@ -81,7 +94,7 @@ export function toggleSuspect(run: RunState, ruleNo: number): RunState {
 export function settleNight(run: RunState, night: NightDef, result: NightState, rewardPool: string[], lastDay: number, payBonus = 0): RunState {
   if (result.outcome === 'playing') return run;
   if (result.outcome === 'failed') {
-    return { ...run, phase: 'failed', lastNight: { day: run.day, pay: 0, resolved: result.resolved.length, newClues: [] } };
+    return { ...run, phase: 'failed', lastNight: { day: run.day, pay: 0, resolved: result.resolved.length, newClues: [], debt: 0 } };
   }
   const newClues = night.anomalies
     .filter((a) => a.clue && result.resolved.includes(a.id) && !run.clues.includes(a.clue))
@@ -90,11 +103,13 @@ export function settleNight(run: RunState, night: NightDef, result: NightState, 
   const options = pickDistinct(rewardPool, 3, run.seed + run.day * 31 + run.loop);
   return {
     ...run,
-    phase: run.day >= lastDay ? 'demo-end' : 'reward',
+    phase: run.day >= lastDay ? 'finale' : 'reward',
     money: run.money + pay,
     clues: [...run.clues, ...newClues],
     rewardOptions: options,
-    lastNight: { day: run.day, pay, resolved: result.resolved.length, newClues },
+    debt: run.debt + result.debt,
+    deck: [...run.deck, ...Array<string>(result.debt).fill(CURSE_CARD)],
+    lastNight: { day: run.day, pay, resolved: result.resolved.length, newClues, debt: result.debt },
   };
 }
 
@@ -113,9 +128,35 @@ export function chooseReward(run: RunState, cardId: string | null): RunState {
 }
 
 /** 실패 후 다시 출근. 회차가 오르고 1일차부터. 수당·단서·캡슐 기계에서 얻은 것은 남는다 */
-export function restartRun(run: RunState, starterDeck: string[], table?: GachaTable): RunState {
-  const { money, clues, owned, equipped, pity, draws } = run;
-  return newRun(starterDeck, run.seed, run.loop + 1, { money, clues, owned, equipped, pity, draws }, table);
+export function restartRun(run: RunState, starterDeck: string[], items: GachaItem[] = []): RunState {
+  const { money, clues, owned, equipped, pity, draws, endings } = run;
+  return newRun(starterDeck, run.seed, run.loop + 1, { money, clues, owned, equipped, pity, draws, endings }, items);
+}
+
+/** 스토리로 얻는 동료(가챠가 아님). 이미 있으면 그대로 */
+export function grantStoryItem(run: RunState, item: GachaItem): RunState {
+  if (run.owned.includes(item.id)) return run;
+  return { ...run, owned: [...run.owned, item.id], deck: item.grantsCard ? [...run.deck, item.grantsCard] : run.deck };
+}
+
+/** 낮 대화의 선택 등으로 얻는 단서 */
+export function addClue(run: RunState, clue: string): RunState {
+  return run.clues.includes(clue) ? run : { ...run, clues: [...run.clues, clue] };
+}
+
+/**
+ * 마지막 밤 뒤의 선택.
+ * closing(폐장)은 자기 이름을 알고(own-name 단서), 필요한 동료를 모두 구출했을 때만 고를 수 있다.
+ */
+export function canChoose(run: RunState, ending: EndingId, required: { clue: string; owned: string[] }): boolean {
+  if (run.phase !== 'finale') return false;
+  if (ending !== 'closing') return true;
+  return run.clues.includes(required.clue) && required.owned.every((id) => run.owned.includes(id));
+}
+
+export function chooseEnding(run: RunState, ending: EndingId, required: { clue: string; owned: string[] }): RunState {
+  if (!canChoose(run, ending, required)) return run;
+  return { ...run, phase: 'ending', lastEnding: ending, endings: run.endings.includes(ending) ? run.endings : [...run.endings, ending] };
 }
 
 export type PullResult = { run: RunState; item: GachaItem; duplicate: boolean };

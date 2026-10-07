@@ -20,7 +20,8 @@
 | `docs/planning/story-v1.md` | 세계관, 진실(스포일러), 엔딩 |
 | `docs/planning/gacha-v1.md` | 캡슐 기계, 등급, 풀 |
 | `docs/planning/monetization-v1.md` | 수익 모델 비교와 추천 (프리미엄 + 확장) |
-| `docs/story/rulebooks.md` | 1~7일차 수칙서 원문 + 설계 메모 |
+| `docs/story/rulebooks.md` | 1~7일차 수칙서 원문 + 설계 메모 + 게임 구현 요약 |
+| `src/data/endings.ts` | 엔딩 3종 문장과 폐장 엔딩 조건 |
 | `docs/story/companions.md` | 동료 12명 |
 | `docs/design/ui-v0.md` | 팔레트, 글꼴, 화면 목업 링크 |
 | `docs/dev/plan.md` | 기술 스택, 구조, 마일스톤 |

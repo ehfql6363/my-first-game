@@ -277,3 +277,9 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .title-art { position: relative; width: 140px; height: 120px; }
 .title-art .moon { position: absolute; right: 0; top: 0; }
 .title-moonroo { position: absolute; left: 0; bottom: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.march { animation: march 9s linear infinite; }
+@keyframes march { 0% { left: -200px; } 100% { left: 360px; } }
+.paper.handwritten ol { font-family: var(--pen); font-size: 22px; color: #2b5fa8; line-height: 1.25; }
+.roster s { color: var(--pen-red); }
+.monitor .march .pixel { position: static; }

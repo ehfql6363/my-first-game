@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'preact/hooks';
-import { chooseReward, newRun, nightSeed, restartRun, settleNight, toggleSuspect, visibleLoopMemos, type RunState } from '../core/run';
+import { chooseEnding, chooseReward, newRun, nightSeed, restartRun, settleNight, toggleSuspect, visibleLoopMemos, type RunState } from '../core/run';
 import { combineMods, type NightState } from '../core/types';
 import { REWARD_POOL, STARTER_DECK } from '../data/cards';
-import { GACHA } from '../data/gacha';
+import { CLOSING_REQUIREMENT, ENDING_DEFS } from '../data/endings';
+import { ALL_ITEMS } from '../data/gacha';
 import { RELICS } from '../data/relics';
 import { LAST_DAY, nightFor } from '../data/nights';
 import { DayScreen } from './DayScreen';
 import { NightScreen } from './NightScreen';
-import { DemoEnd, NightResult, RewardScreen } from './ResultScreens';
+import { EndingScreen, FinaleScreen, NightResult, RewardScreen } from './ResultScreens';
 import { PixelSprite } from './PixelSprite';
 import { Rulebook } from './Rulebook';
 import { SoundToggle } from './SoundToggle';
@@ -25,8 +26,10 @@ type View = 'title' | 'run' | 'night' | 'result';
 
 export function App() {
   const [saved] = useState(loadRun);
-  const canContinue = saved !== null && (saved.phase === 'day' || saved.phase === 'reward');
   const [run, setRun] = useState<RunState | null>(null);
+  // 엔딩 뒤 타이틀로 돌아오면 지금 진행 중인 회차를 이어하기로 보여 준다
+  const resumable = run ?? saved;
+  const canContinue = resumable !== null && resumable.phase !== 'failed';
   const [view, setView] = useState<View>('title');
   const [lastNight, setLastNight] = useState<NightState | null>(null);
 
@@ -45,17 +48,20 @@ export function App() {
         <div class="sub">
           야간 경비원 모집 · 시급 높음 · 경력 무관
           <br />
-          체험판 · 1~{LAST_DAY}일차
+          수습 기간 {LAST_DAY}일
         </div>
-        {canContinue && (
-          <button type="button" class="btn-main" onClick={() => { setRun(saved); setView('run'); }}>
-            이어하기 · {saved.loop > 1 ? `${saved.loop}번째 출근 · ` : ''}{saved.day}일차 {saved.phase === 'reward' ? '보상' : '낮'}
+        {resumable && resumable.endings.length > 0 && (
+          <div class="sub" style={{ color: 'var(--gold)' }}>본 엔딩: {resumable.endings.map((e) => ENDING_DEFS[e].title).join(' · ')}</div>
+        )}
+        {canContinue && resumable && (
+          <button type="button" class="btn-main" onClick={() => { setRun(resumable); setView('run'); }}>
+            이어하기 · {resumable.loop > 1 ? `${resumable.loop}번째 출근 · ` : ''}{resumable.phase === 'ending' ? '엔딩' : resumable.phase === 'finale' ? '7일차 06:00' : `${resumable.day}일차 ${resumable.phase === 'reward' ? '보상' : '낮'}`}
           </button>
         )}
         <button
           type="button"
           class={canContinue ? 'btn-sub' : 'btn-main'}
-          onClick={() => { clearRun(); setRun(newRun(STARTER_DECK, newSeed(), 1, undefined, GACHA)); setView('run'); }}
+          onClick={() => { clearRun(); setRun(newRun(STARTER_DECK, newSeed(), 1, undefined, ALL_ITEMS)); setView('run'); }}
         >
           {canContinue ? '새로 시작 (저장 삭제)' : '출근하기'}
         </button>
@@ -77,9 +83,10 @@ export function App() {
         mods={mods}
         relicNames={run.equipped.map((id) => RELICS[id].name)}
         myMemos={visibleLoopMemos(nightFor(run.day), run)}
+        clues={run.clues}
         onFinish={(state) => {
           setLastNight(state);
-          setRun(settleNight(run, nightFor(run.day), state, REWARD_POOL, LAST_DAY, mods.payBonus));
+          setRun(settleNight(run, nightFor(run.day), state, REWARD_POOL, LAST_DAY, mods.payBonus + (nightFor(run.day).payBonus ?? 0)));
           setView('result');
         }}
       />
@@ -92,7 +99,7 @@ export function App() {
         run={run}
         night={lastNight}
         onNext={() => {
-          if (run.phase === 'failed') setRun(restartRun(run, STARTER_DECK, GACHA));
+          if (run.phase === 'failed') setRun(restartRun(run, STARTER_DECK, ALL_ITEMS));
           setView('run');
         }}
       />
@@ -100,8 +107,9 @@ export function App() {
   }
 
   if (run.phase === 'reward') return <RewardScreen run={run} onChoose={(id) => setRun(chooseReward(run, id))} />;
-  if (run.phase === 'demo-end') {
-    return <DemoEnd run={run} onRestart={() => setRun(restartRun(run, STARTER_DECK, GACHA))} />;
+  if (run.phase === 'finale') return <FinaleScreen run={run} onChoose={(e) => setRun(chooseEnding(run, e, CLOSING_REQUIREMENT))} />;
+  if (run.phase === 'ending') {
+    return <EndingScreen run={run} onRestart={() => setRun(restartRun(run, STARTER_DECK, ALL_ITEMS))} onTitle={() => setView('title')} />;
   }
 
   // 낮. 1일차는 숙직실 대신 첫 수칙서만 보여 준다.
@@ -110,7 +118,7 @@ export function App() {
       <main class="screen">
         <div class="rule-label">NIGHT 01 · 근무 전 확인</div>
         {run.loop > 1 && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{run.loop}번째 출근. 처음 출근하는 기분이다. 분명히.</div>}
-        <Rulebook night={nightFor(1)} myMemos={visibleLoopMemos(nightFor(1), run)} />
+        <Rulebook night={nightFor(1)} myMemos={visibleLoopMemos(nightFor(1), run)} clues={run.clues} />
         <div style={{ flex: 1 }} />
         <button type="button" class="btn-main" onClick={() => setView('night')}>수칙을 확인했습니다 · 근무 시작</button>
       </main>

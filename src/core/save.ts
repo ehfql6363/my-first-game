@@ -1,9 +1,9 @@
 // 저장 데이터 직렬화와 검증. 저장 데이터는 사용자가 마음대로 고칠 수 있다고 가정한다 (docs/departments/security.md).
 
-import type { RunPhase, RunState } from './run';
+import { ENDINGS, type EndingId, type RunPhase, type RunState } from './run';
 
-const PHASES: RunPhase[] = ['day', 'reward', 'failed', 'demo-end'];
-const LIMITS = { maxDay: 7, maxLoop: 9999, maxDeck: 80, maxMoney: 1_000_000, maxClues: 50, maxRule: 20, maxOwned: 200, maxPity: 1000, maxDraws: 1_000_000 } as const;
+const PHASES: RunPhase[] = ['day', 'reward', 'failed', 'finale', 'ending'];
+const LIMITS = { maxDay: 7, maxLoop: 9999, maxDeck: 120, maxDebt: 50, maxMoney: 1_000_000, maxClues: 50, maxRule: 20, maxOwned: 200, maxPity: 1000, maxDraws: 1_000_000 } as const;
 
 export function serializeRun(run: RunState): string {
   return JSON.stringify(run);
@@ -11,7 +11,8 @@ export function serializeRun(run: RunState): string {
 
 /**
  * 형식이나 범위가 하나라도 맞지 않으면 null (조용히 새 게임으로).
- * 버전 1(M2) 저장은 캡슐 기계 항목을 비운 채로 옮겨 온다.
+ * 옛 저장은 옮겨 온다: 버전 1(M2) → 캡슐 기계 항목 비움, 버전 2(M3) → 빚·엔딩 기록 비움.
+ * 2일차까지였던 체험판의 'demo-end'는 3일차로 이어지도록 보상 단계(고를 카드 없음)로 바꾼다.
  */
 export function parseRun(
   raw: string | null,
@@ -27,8 +28,12 @@ export function parseRun(
   } catch {
     return null;
   }
-  if (!isObj(d) || (d.version !== 1 && d.version !== 2)) return null;
+  if (!isObj(d) || (d.version !== 1 && d.version !== 2 && d.version !== 3)) return null;
   if (d.version === 1) d = { ...d, version: 2, owned: [], equipped: [], pity: 0, draws: 0 };
+  if (isObj(d) && d.version === 2) {
+    d = { ...d, version: 3, debt: 0, endings: [], lastEnding: null, ...(d.phase === 'demo-end' ? { phase: 'reward', rewardOptions: [] } : {}) };
+    if (isObj(d) && isObj(d.lastNight)) d = { ...d, lastNight: { ...d.lastNight, debt: 0 } };
+  }
   if (!isObj(d)) return null;
   const { day, loop, phase, deck, money, clues, suspected, rewardOptions, lastNight, seed } = d;
   if (!isInt(day, 1, LIMITS.maxDay) || !isInt(loop, 1, LIMITS.maxLoop) || !isInt(money, 0, LIMITS.maxMoney) || !isInt(seed, 0, 2 ** 32 - 1)) return null;
@@ -42,8 +47,12 @@ export function parseRun(
   if (!isStrList(owned, LIMITS.maxOwned, knownItems)) return null;
   if (!isStrList(equipped, 2, relicIds) || !equipped.every((r) => owned.includes(r)) || new Set(equipped).size !== equipped.length) return null;
   if (!isInt(pity, 0, LIMITS.maxPity) || !isInt(draws, 0, LIMITS.maxDraws)) return null;
+  const { debt, endings, lastEnding } = d;
+  if (!isInt(debt, 0, LIMITS.maxDebt)) return null;
+  if (!Array.isArray(endings) || endings.length > ENDINGS.length || !endings.every((e) => ENDINGS.includes(e as EndingId))) return null;
+  if (lastEnding !== null && !ENDINGS.includes(lastEnding as EndingId)) return null;
   return {
-    version: 2,
+    version: 3,
     day,
     loop,
     phase: phase as RunPhase,
@@ -58,6 +67,9 @@ export function parseRun(
     equipped: equipped.slice(),
     pity,
     draws,
+    debt,
+    endings: (endings as EndingId[]).slice(),
+    lastEnding: lastEnding as EndingId | null,
   };
 }
 
@@ -71,5 +83,5 @@ function isStrList(v: unknown, max: number, allowed: ReadonlySet<string>): v is 
   return Array.isArray(v) && v.length <= max && v.every((x) => typeof x === 'string' && allowed.has(x));
 }
 function isLastNight(v: unknown, knownClues: ReadonlySet<string>): boolean {
-  return isObj(v) && isInt(v.day, 1, LIMITS.maxDay) && isInt(v.pay, 0, LIMITS.maxMoney) && isInt(v.resolved, 0, 100) && isStrList(v.newClues, LIMITS.maxClues, knownClues);
+  return isObj(v) && isInt(v.day, 1, LIMITS.maxDay) && isInt(v.pay, 0, LIMITS.maxMoney) && isInt(v.resolved, 0, 100) && isStrList(v.newClues, LIMITS.maxClues, knownClues) && isInt(v.debt, 0, LIMITS.maxDebt);
 }

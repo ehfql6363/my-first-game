@@ -32,6 +32,7 @@ export function createNight(night: NightDef, deck: string[], seed: number, mods:
     discard: [],
     resolved: [],
     revealed: mods.startRevealed,
+    debt: 0,
     outcome: 'playing',
     seed: nextSeed,
     mods,
@@ -71,32 +72,42 @@ export function playCard(
     discard: [...state.discard, cardId],
   };
 
-  if (card.response === 'zoom') return { ok: true, state: { ...next, revealed: true } };
-
   const matches = card.response
     ? activeAnomalies(night, state).filter(
         (a) => (card.anyCamera || a.cameraId === cameraId) && (card.response === 'any' || a.requires === card.response),
       )
     : [];
-  const targets = card.resolveAll ? matches : matches.slice(0, 1);
+  const targets = (card.resolveAll ? matches : matches.slice(0, 1)).filter((a) => !a.gaze);
   if (targets.length) next = { ...next, resolved: [...next.resolved, ...targets.map((a) => a.id)] };
+  // 카메라 확대는 대응(확대로 읽어야 하는 단서)과 별개로 이번 턴 모든 카메라를 드러낸다
+  if (card.response === 'zoom') next = { ...next, revealed: true };
   return { ok: true, state: next, resolvedAnomaly: targets[0], resolvedCount: targets.length };
 }
 
-export function endTurn(night: NightDef, state: NightState): NightState {
+/**
+ * 턴 종료. viewedCameraId = 턴을 끝낼 때 보고 있던 카메라 ("보지 마십시오" 판정용).
+ */
+export function endTurn(night: NightDef, state: NightState, viewedCameraId?: string): NightState {
   if (state.outcome !== 'playing') return state;
-  const gained = activeAnomalies(night, state).reduce((sum, a) => sum + a.riskPerTurn, 0);
+  const gained = activeAnomalies(night, state)
+    .filter((a) => !a.gaze || a.cameraId === viewedCameraId)
+    .reduce((sum, a) => sum + a.riskPerTurn, 0);
   const limit = maxRisk(state);
   const risk = Math.min(limit, state.risk + gained);
   const turn = state.turn + 1;
   const outcome = risk >= limit ? 'failed' : turn >= night.endTurn ? 'survived' : 'playing';
+
+  const lapsed = night.anomalies.filter((a) => a.expiresAtTurn === turn && a.onExpire && !state.resolved.includes(a.id));
+  const bonus = lapsed.reduce((s, a) => s + (a.onExpire?.battery ?? 0), 0);
+  const debt = lapsed.reduce((s, a) => s + (a.onExpire?.debt ?? 0), 0);
 
   const next: NightState = {
     ...state,
     turn,
     risk,
     outcome,
-    battery: batteryPerTurn(state),
+    debt: state.debt + debt,
+    battery: batteryPerTurn(state) + bonus,
     revealed: false,
     hand: [],
     discard: [...state.discard, ...state.hand],

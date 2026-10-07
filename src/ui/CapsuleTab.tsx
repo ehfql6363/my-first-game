@@ -1,9 +1,9 @@
 import { useState } from 'preact/hooks';
 import { itemRates, type GachaItem } from '../core/gacha';
-import { pullCapsule, type RunState } from '../core/run';
+import { grantStoryItem, pullCapsule, type RunState } from '../core/run';
 import { CARDS } from '../data/cards';
-import { COMPANIONS } from '../data/companions';
-import { GACHA, GRADE_COLOR, GRADE_LABEL } from '../data/gacha';
+import { COMPANIONS, STORY_COMPANIONS } from '../data/companions';
+import { GACHA, GRADE_COLOR, GRADE_LABEL, STORY_ITEMS } from '../data/gacha';
 import { RELICS } from '../data/relics';
 import { play as sfx } from './sound';
 
@@ -17,6 +17,18 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
   const [last, setLast] = useState<{ item: GachaItem; duplicate: boolean } | null>(null);
   const [showOdds, setShowOdds] = useState(false);
   const canPull = run.money >= GACHA.cost;
+
+  // 스토리 캡슐 (뽑기 아님): 5일차 특별 근무일의 확정 캡슐, 이름을 알고 모두 구출하면 검은 캡슐
+  const taeoReady = run.day >= 5 && !run.owned.includes('taeo-figure');
+  const allRescued = [...Object.keys(COMPANIONS), 'taeo-figure'].every((id) => run.owned.includes(id));
+  const blackReady = run.clues.includes('own-name') && allRescued && !run.owned.includes('dalhee-0');
+  function openStory(id: string) {
+    const item = STORY_ITEMS.find((i) => i.id === id)!;
+    sfx('capsule');
+    sfx('gold');
+    setLast({ item, duplicate: false });
+    onChange(grantStoryItem(run, item));
+  }
 
   function pull() {
     const r = pullCapsule(run, GACHA);
@@ -48,6 +60,16 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
         <span>금색 확정까지 {GACHA.pity - run.pity}회</span>
       </div>
 
+      {taeoReady && (
+        <button type="button" class="btn-main" style={{ background: '#a46bff' }} onClick={() => openStory('taeo-figure')}>
+          특별 근무일 확정 캡슐 열기 (무료)
+        </button>
+      )}
+      {blackReady && (
+        <button type="button" class="btn-main" style={{ background: '#0b0b12', color: 'var(--pink)', boxShadow: '0 0 0 3px var(--pink)' }} onClick={() => openStory('dalhee-0')}>
+          검은 캡슐이 굴러 나왔다
+        </button>
+      )}
       {last && <PullResult item={last.item} duplicate={last.duplicate} />}
 
       <button type="button" class="btn-sub" aria-expanded={showOdds} onClick={() => setShowOdds(!showOdds)}>
@@ -59,12 +81,12 @@ export function CapsuleTab({ run, onChange }: { run: RunState; onChange: (run: R
 }
 
 function PullResult({ item, duplicate }: { item: GachaItem; duplicate: boolean }) {
-  const companion = COMPANIONS[item.id];
+  const companion = COMPANIONS[item.id] ?? STORY_COMPANIONS[item.id];
   const relic = RELICS[item.id];
   return (
     <div class="pull" role="status">
       <div class="head">
-        <div class="capsule-ball" style={{ background: GRADE_COLOR[item.grade] }} />
+        <div class="capsule-ball" style={{ background: item.id === 'dalhee-0' ? '#0b0b12' : GRADE_COLOR[item.grade] }} />
         <div>
           <div style={{ fontSize: '11px', color: '#d9cbe8' }}>{GRADE_LABEL[item.grade]} · {item.kind === 'companion' ? '동료' : item.kind === 'relic' ? '기념품' : '카드'}</div>
           <div style={{ fontSize: '17px', fontWeight: 700 }}>{item.name}</div>

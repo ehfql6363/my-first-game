@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks';
-import { RELIC_SLOTS, toggleEquip, visibleLoopMemos, type RunState } from '../core/run';
+import { addClue, RELIC_SLOTS, toggleEquip, visibleLoopMemos, type RunState } from '../core/run';
 import { CARDS } from '../data/cards';
 import { CLUES } from '../data/clues';
-import { COMPANIONS } from '../data/companions';
+import { COMPANIONS, STORY_COMPANIONS, type CompanionDef } from '../data/companions';
 import { RELICS } from '../data/relics';
 import { CapsuleTab } from './CapsuleTab';
 import { SPEAKERS } from '../data/dialogue';
@@ -53,10 +53,10 @@ export function DayScreen({ run, onToggle, onChange, onStart }: Props) {
         {tab === 0 && (
           <>
             <div style={{ fontSize: '12px', color: '#d9cbe8', lineHeight: 1.5 }}>오늘 밤 수칙서를 미리 읽고, 믿을 수 없는 수칙에 표시해 두세요. 표시는 근무 중 수칙 띠에 빨간 줄로 보입니다.</div>
-            <Rulebook night={night} suspected={run.suspected} onToggle={onToggle} myMemos={visibleLoopMemos(night, run)} />
+            <Rulebook night={night} suspected={run.suspected} onToggle={onToggle} myMemos={visibleLoopMemos(night, run)} clues={run.clues} />
           </>
         )}
-        {tab === 1 && <Talk day={run.day} owned={run.owned} />}
+        {tab === 1 && <Talk run={run} onChange={onChange} />}
         {tab === 2 && <DeckAndClues run={run} onChange={onChange} />}
         {tab === 3 && <CapsuleTab run={run} onChange={onChange} />}
       </div>
@@ -66,11 +66,16 @@ export function DayScreen({ run, onToggle, onChange, onStart }: Props) {
   );
 }
 
-function Talk({ day, owned }: { day: number; owned: string[] }) {
-  const rescued = Object.values(COMPANIONS)
-    .filter((c) => owned.includes(c.id))
-    .map((c) => ({ id: c.id, name: c.name, tag: c.tag, color: c.color, lines: { [day]: c.lines } as Record<number, string[]> }));
-  const people = [...SPEAKERS.filter((p) => p.lines[day]), ...rescued];
+type Person = { id: string; name: string; tag: string; color: string; lines: Record<number, string[]>; choice?: CompanionDef['choice'] };
+
+function Talk({ run, onChange }: { run: RunState; onChange: (run: RunState) => void }) {
+  const day = run.day;
+  const [picked, setPicked] = useState<string | null>(null);
+  const rescued: Person[] = [...Object.values(COMPANIONS), ...Object.values(STORY_COMPANIONS)]
+    .filter((c) => run.owned.includes(c.id))
+    .map((c) => ({ id: c.id, name: c.name, tag: c.tag, color: c.color, lines: { [day]: c.lines }, choice: c.choice }));
+  // 태오는 2일차 밤에 사라진다
+  const people: Person[] = [...SPEAKERS.filter((p) => p.lines[day] && !(p.id === 'taeo' && day > 2)), ...rescued];
   const [who, setWho] = useState(0);
   const [line, setLine] = useState(0);
   if (people.length === 0) return <div class="talk"><p>숙직실에 아무도 없다. 의자가 하나 더 놓여 있다.</p></div>;
@@ -81,7 +86,7 @@ function Talk({ day, owned }: { day: number; owned: string[] }) {
     <>
       <div class="people">
         {people.map((q, i) => (
-          <button type="button" key={q.id} class="person" aria-pressed={who === i} onClick={() => { setWho(i); setLine(0); }}>
+          <button type="button" key={q.id} class="person" aria-pressed={who === i} onClick={() => { setWho(i); setLine(0); setPicked(null); }}>
             <span class="face" style={{ background: q.color }}>{q.name[0]}</span>
             <b>{q.name}</b>
             <span style={{ fontSize: '10px', color: '#d9cbe8' }}>{q.tag}</span>
@@ -90,6 +95,20 @@ function Talk({ day, owned }: { day: number; owned: string[] }) {
       </div>
       <div class="talk">
         <p>"{lines[line]}"</p>
+        {last && p.choice && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ fontSize: '12px', color: '#d9cbe8' }}>{p.choice.prompt}</div>
+            {picked === null ? (
+              p.choice.options.map((o) => (
+                <button type="button" key={o.label} class="btn-sub" style={{ textAlign: 'left' }} onClick={() => { setPicked(o.reply); if (o.clue) onChange(addClue(run, o.clue)); }}>
+                  {o.label}
+                </button>
+              ))
+            ) : (
+              <div class="pen" style={{ color: 'var(--pink)', fontSize: '22px' }}>{picked}</div>
+            )}
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontFamily: 'var(--pixel)', fontSize: '11px', color: '#d9cbe8' }}>{line + 1} / {lines.length}</span>
           <button type="button" class="btn-sub" style={{ background: '#ffb877', color: 'var(--ink)', fontWeight: 700 }} onClick={() => setLine(last ? 0 : line + 1)}>

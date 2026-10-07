@@ -1,18 +1,10 @@
-import type { AnomalyDef, NightDef } from '../core/types';
+import type { NightDef } from '../core/types';
+import { anomalyMaker } from './anomaly';
 
 // 2일차 · 회전목마. 7번 수칙이 거짓 (docs/story/rulebooks.md 2일차 설계 메모를 CCTV 방식으로 옮김)
 // 40분 × 9턴
 
-const a = (
-  id: string,
-  kind: string,
-  cameraId: string,
-  appearsAtTurn: number,
-  requires: AnomalyDef['requires'],
-  riskPerTurn: number,
-  name: string,
-  extra: Partial<AnomalyDef> = {},
-): AnomalyDef => ({ id: `n2-${id}`, kind, cameraId, appearsAtTurn, requires, riskPerTurn, name, ...extra });
+const a = anomalyMaker('n2');
 
 export const NIGHT_2: NightDef = {
   id: 'night-2',

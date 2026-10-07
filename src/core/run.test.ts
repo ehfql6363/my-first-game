@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GachaTable } from './gacha';
-import { chooseReward, newRun, nightSeed, PAY, pullCapsule, RELIC_SLOTS, restartRun, settleNight, toggleEquip, toggleSuspect } from './run';
+import { canChoose, chooseEnding, chooseReward, grantStoryItem, newRun, nightSeed, PAY, pullCapsule, RELIC_SLOTS, restartRun, settleNight, toggleEquip, toggleSuspect } from './run';
 import { NO_MODS, type NightDef, type NightState } from './types';
 
 const NIGHT: NightDef = {
@@ -12,7 +12,7 @@ const NIGHT: NightDef = {
 };
 const POOL = ['p1', 'p2', 'p3', 'p4', 'p5'];
 const result = (outcome: NightState['outcome'], resolved: string[]): NightState => ({
-  turn: 9, battery: 3, risk: 0, hand: [], drawPile: [], discard: [], resolved, revealed: false, outcome, seed: 1, mods: NO_MODS,
+  turn: 9, battery: 3, risk: 0, hand: [], drawPile: [], discard: [], resolved, revealed: false, debt: 0, outcome, seed: 1, mods: NO_MODS,
 });
 
 describe('회차 진행', () => {
@@ -35,9 +35,15 @@ describe('회차 진행', () => {
     expect(chooseReward(r, null).deck).toEqual(['x']);
   });
 
-  it('마지막 날을 넘기면 체험판 끝', () => {
-    const run = settleNight({ ...newRun(['x'], 5), day: 2 }, NIGHT, result('survived', []), POOL, 2);
-    expect(run.phase).toBe('demo-end');
+  it('마지막 날을 버티면 엔딩 선택(finale)', () => {
+    const run = settleNight({ ...newRun(['x'], 5), day: 7 }, NIGHT, result('survived', []), POOL, 7);
+    expect(run.phase).toBe('finale');
+  });
+
+  it('문루 빚만큼 저주 카드가 덱에 섞이고 빚이 쌓인다', () => {
+    const run = settleNight(newRun(['x'], 5), NIGHT, { ...result('survived', []), debt: 2 }, POOL, 7);
+    expect(run.debt).toBe(2);
+    expect(run.deck.filter((c) => c === 'laughter')).toHaveLength(2);
   });
 
   it('실패하면 failed, 다시 출근하면 회차가 오르고 1일차 시작 덱으로', () => {
@@ -107,8 +113,35 @@ describe('캡슐 기계와 회차', () => {
 
   it('실패 후 재출근해도 수당·단서·얻은 것·장착·천장은 남고, 동료 카드는 시작 덱에 포함된다', () => {
     const run = { ...newRun(['x'], 1), day: 2, money: 77, clues: ['nametag'], owned: ['relic', 'buddy'], equipped: ['relic'], pity: 2, draws: 9, deck: ['x', 'reward'] };
-    const again = restartRun(run, ['x'], TABLE);
+    const again = restartRun(run, ['x'], TABLE.items);
     expect(again).toMatchObject({ day: 1, loop: 2, money: 77, clues: ['nametag'], owned: ['relic', 'buddy'], equipped: ['relic'], pity: 2, draws: 9 });
     expect(again.deck).toEqual(['x', 'buddy-card']);
+  });
+
+  it('스토리 동료는 한 번만 얻고 카드가 덱에 들어간다', () => {
+    const item = { id: 'taeo-figure', name: '태오', grade: 'purple' as const, kind: 'companion' as const, grantsCard: 'excuse' };
+    const once = grantStoryItem(newRun(['x'], 1), item);
+    expect(once.deck).toEqual(['x', 'excuse']);
+    expect(grantStoryItem(once, item)).toBe(once);
+  });
+});
+
+describe('엔딩', () => {
+  const REQ = { clue: 'own-name', owned: ['a', 'b'] };
+  const finale = { ...newRun(['x'], 1), phase: 'finale' as const };
+
+  it('정규직·퇴사 엔딩은 언제나, 폐장 엔딩은 이름 단서와 동료 전원이 있어야 고를 수 있다', () => {
+    expect(canChoose(finale, 'regular', REQ)).toBe(true);
+    expect(canChoose(finale, 'resign', REQ)).toBe(true);
+    expect(canChoose(finale, 'closing', REQ)).toBe(false);
+    expect(canChoose({ ...finale, clues: ['own-name'], owned: ['a'] }, 'closing', REQ)).toBe(false);
+    expect(canChoose({ ...finale, clues: ['own-name'], owned: ['a', 'b'] }, 'closing', REQ)).toBe(true);
+  });
+
+  it('엔딩을 고르면 기록되고, 다시 출근해도 기록이 남는다', () => {
+    const done = chooseEnding(finale, 'resign', REQ);
+    expect(done).toMatchObject({ phase: 'ending', lastEnding: 'resign', endings: ['resign'] });
+    expect(chooseEnding(finale, 'closing', REQ)).toBe(finale);
+    expect(restartRun(done, ['x']).endings).toEqual(['resign']);
   });
 });

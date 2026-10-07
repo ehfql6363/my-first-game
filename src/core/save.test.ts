@@ -17,7 +17,9 @@ describe('저장 데이터', () => {
   it.each([
     ['빈 값', null],
     ['깨진 JSON', '{"version":1,'],
-    ['모르는 버전', JSON.stringify({ ...valid, version: 3 })],
+    ['모르는 버전', JSON.stringify({ ...valid, version: 9 })],
+    ['모르는 엔딩', JSON.stringify({ ...valid, endings: ['secret'] })],
+    ['음수 빚', JSON.stringify({ ...valid, debt: -1 })],
     ['모르는 캡슐 아이템', JSON.stringify({ ...valid, owned: ['popcorn', 'gold-everything'] })],
     ['갖지 않은 기념품 장착', JSON.stringify({ ...valid, equipped: ['popcorn'], owned: ['haru'] })],
     ['기념품이 아닌 것 장착', JSON.stringify({ ...valid, equipped: ['haru'] })],
@@ -36,9 +38,15 @@ describe('저장 데이터', () => {
     expect(parse(raw as string | null)).toBeNull();
   });
 
-  it('M2(버전 1) 저장은 캡슐 기계 항목을 비운 채 불러온다', () => {
-    const { owned: _o, equipped: _e, pity: _p, draws: _d, ...rest } = valid;
+  it('M2(버전 1) 저장은 캡슐 기계·빚·엔딩 항목을 비운 채 불러온다', () => {
+    const { owned: _o, equipped: _e, pity: _p, draws: _d, debt: _b, endings: _n, lastEnding: _l, ...rest } = valid;
     const v1 = JSON.stringify({ ...rest, version: 1 });
     expect(parse(v1)).toEqual({ ...valid, owned: [], equipped: [], pity: 0, draws: 0 });
+  });
+
+  it('M3(버전 2)의 체험판 끝 저장은 3일차로 이어지는 보상 단계로 바뀐다', () => {
+    const { debt: _b, endings: _n, lastEnding: _l, ...rest } = valid;
+    const v2 = JSON.stringify({ ...rest, version: 2, phase: 'demo-end', rewardOptions: ['light'] });
+    expect(parse(v2)).toMatchObject({ version: 3, phase: 'reward', rewardOptions: [], debt: 0, endings: [] });
   });
 });

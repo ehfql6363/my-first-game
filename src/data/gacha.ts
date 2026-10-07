@@ -1,5 +1,5 @@
 import type { GachaItem, GachaTable } from '../core/gacha';
-import { COMPANIONS } from './companions';
+import { COMPANIONS, STORY_COMPANIONS } from './companions';
 import { RELICS } from './relics';
 
 // 캡슐 기계 확률표. 게임 안 "확률 보기"에 이 값이 그대로 나온다 (한국 확률형 아이템 표시 의무).
@@ -19,6 +19,11 @@ export const GACHA: GachaTable = {
   duplicateRefund: 40,
   items,
 };
+
+/** 스토리로 얻는 동료 (뽑기 풀에는 없음). 카드 지급과 저장 검증에 쓴다 */
+export const STORY_ITEMS: GachaItem[] = Object.values(STORY_COMPANIONS).map((c) => ({ id: c.id, name: c.name, grade: c.grade, kind: 'companion', grantsCard: c.card }));
+/** 카드를 주는 모든 아이템 (회차 시작 덱 계산용) */
+export const ALL_ITEMS: GachaItem[] = [...GACHA.items, ...STORY_ITEMS];
 
 export const GRADE_LABEL = { white: '흰색 (일반)', blue: '파란색 (희귀)', purple: '보라색 (영웅)', gold: '금색 (전설)' } as const;
 export const GRADE_COLOR = { white: '#f4f1ea', blue: '#4f8dff', purple: '#a46bff', gold: '#ffd76a' } as const;

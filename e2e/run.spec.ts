@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { playNight } from './helpers';
+import { loadSave, playNight } from './helpers';
 
 test('1일차 → 보상 → 숙직실 → 2일차(거짓 수칙 간파) → 체험판 끝, 중간 저장과 이어하기', async ({ page }) => {
   await page.goto('/?seed=11');
@@ -35,8 +35,8 @@ test('1일차 → 보상 → 숙직실 → 2일차(거짓 수칙 간파) → 체
   await expect(page.getByText('단서 획득 · 한태오의 이름표')).toBeVisible();
   await page.screenshot({ path: 'e2e/.results/night2-result.png' });
 
-  await page.getByRole('button', { name: '계속' }).click();
-  await expect(page.getByText('2일차 근무 완료')).toBeVisible();
+  await page.getByRole('button', { name: '보상 받기' }).click();
+  await expect(page.getByText('어젯밤 근무 보상')).toBeVisible();
 });
 
 test('조작된 저장 데이터는 무시하고 새로 시작한다', async ({ page }) => {
@@ -52,7 +52,7 @@ test('캡슐 기계: 확률표 공개, 뽑으면 결과와 천장 카운트, 기
   // 수당 1000인 2일차 낮 저장 상태에서 시작 (실제 저장 형식 그대로)
   await page.evaluate(() => {
     const deck = [...Array(4).fill('light'), ...Array(4).fill('lock'), ...Array(3).fill('ignore'), ...Array(3).fill('zoom')];
-    localStorage.setItem('happymoon-land/run', JSON.stringify({ version: 2, day: 2, loop: 1, phase: 'day', deck, money: 1000, clues: [], suspected: [], rewardOptions: [], lastNight: null, seed: 5, owned: [], equipped: [], pity: 0, draws: 0 }));
+    localStorage.setItem('happymoon-land/run', JSON.stringify({ version: 3, day: 2, loop: 1, phase: 'day', deck, money: 1000, clues: [], suspected: [], rewardOptions: [], lastNight: null, seed: 5, owned: [], equipped: [], pity: 0, draws: 0, debt: 0, endings: [], lastEnding: null }));
   });
   await page.reload();
   await page.getByRole('button', { name: /이어하기/ }).click();

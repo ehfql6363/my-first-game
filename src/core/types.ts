@@ -40,6 +40,10 @@ export interface AnomalyDef {
   requires: ResponseId;
   /** 대응하지 않은 채 턴이 끝날 때마다 오르는 위험도 */
   riskPerTurn: number;
+  /** "보지 마십시오": 턴이 끝날 때 이 카메라를 보고 있을 때만 위험도가 오른다. 대응으로 사라지지 않고 기한까지 남는다 */
+  gaze?: boolean;
+  /** 대응하지 않고 기한이 지나 사라질 때 생기는 일 (다음 턴 배터리, 문루 빚) */
+  onExpire?: { battery?: number; debt?: number };
   /** 해결하면 얻는 단서 id (거짓 수칙을 간파했을 때의 보상) */
   clue?: string;
   /** 해결했을 때 / 그냥 사라졌을 때 보여 줄 문장 */
@@ -68,6 +72,12 @@ export interface NightDef {
   rules: RuleText[];
   /** 수칙서 뒷면 손글씨 */
   memo?: string;
+  /** 이 밤의 수당 보너스 (1 = +100%) */
+  payBonus?: number;
+  /** 수칙이 전부 플레이어 글씨로 적혀 있는 밤 (7일차) */
+  handwritten?: boolean;
+  /** 단서가 있으면 지워진 수칙 문장이 복원된다 */
+  restored?: { ruleNo: number; clue: string; text: string }[];
   /** 다시 출근했을 때 수칙서에 나타나는 '내 글씨' 메모. 조건을 만족할 때만 */
   loopMemos?: { minLoop: number; clue?: string; text: string }[];
 }
@@ -84,6 +94,8 @@ export interface NightState {
   resolved: string[];
   /** 이번 턴에 카메라 확대를 써서 모든 카메라의 이상 유무가 보이는지 */
   revealed: boolean;
+  /** 이번 밤에 쌓인 문루 빚 */
+  debt: number;
   /** 이 밤에 적용 중인 보정치 (기념품 등) */
   mods: NightMods;
   outcome: NightOutcome;

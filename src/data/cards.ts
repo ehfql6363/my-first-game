@@ -16,6 +16,9 @@ export const CARDS: Record<string, CardDef> = {
   patrol: { id: 'patrol', name: '대신 순찰', cost: 2, kind: 'ally', response: 'any', resolveAll: true, desc: '김반장. 이 카메라의 이상 현상을 전부 정리한다' },
   'mascot-act': { id: 'mascot-act', name: '같은 편인 척', cost: 1, kind: 'ally', response: 'light', anyCamera: true, desc: '하루. 어느 카메라든 조명 끄기 대응 하나' },
   wrench: { id: 'wrench', name: '렌치', cost: 1, kind: 'ally', response: 'lock', anyCamera: true, desc: '도윤. 어느 카메라든 문 잠그기 대응 하나' },
+  // 스토리로 얻는 동료 카드 (가챠 아님)
+  excuse: { id: 'excuse', name: '핑계 말풍선', cost: 0, kind: 'ally', response: 'ignore', anyCamera: true, desc: '태오. "죄송한데요!" 어느 카메라든 방송 무시 대응 하나' },
+  'blank-tag': { id: 'blank-tag', name: '빈 이름표', cost: 1, kind: 'ally', response: 'any', anyCamera: true, desc: '0회차의 나. 어느 카메라든 이상 현상 하나를 지운다' },
 };
 
 export const STARTER_DECK: string[] = [

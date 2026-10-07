@@ -10,15 +10,24 @@ function playByTheBook(night: NightDef, deck: string[], seed: number, chaseClues
   let s = createNight(night, deck, seed);
   while (s.outcome === 'playing') {
     for (const a of activeAnomalies(night, s)) {
+      if (a.gaze) continue;
       if (a.clue && !chaseClues) continue;
       const idx = s.hand.findIndex((id) => CARDS[id].response === a.requires);
       if (idx < 0) continue;
       const r = playCard(night, CARDS, s, idx, a.cameraId);
       if (r.ok) s = r.state;
     }
-    s = endTurn(night, s);
+    // "보지 마십시오": 보면 안 되는 화면이 아닌 카메라를 보며 턴을 끝낸다
+    const gazed = new Set(activeAnomalies(night, s).filter((a) => a.gaze).map((a) => a.cameraId));
+    s = endTurn(night, s, night.cameras.find((c) => !gazed.has(c.id))?.id);
   }
   return s;
+}
+
+/** n일차에 평범한 플레이어가 가졌을 덱: 시작 덱 + 보상 (n-1)장 + 5일차부터 태오 피규어 카드 */
+function typicalDeck(day: number, extra: string[] = []): string[] {
+  const rewards = Array.from({ length: day - 1 }, (_, k) => REWARD_POOL[k % REWARD_POOL.length]);
+  return [...STARTER_DECK, ...rewards, ...(day >= 5 ? ['excuse'] : []), ...extra];
 }
 
 function survivalRate(night: NightDef, deck: string[], chaseClues = false): number {
@@ -42,6 +51,17 @@ describe.each(NIGHTS.map((n) => [n.id, n] as const))('%s 데이터', (_, night) 
 
   it('거짓 수칙에 걸린 이상 현상은 무시해도 위험하지 않다 (단서 없는 함정 금지)', () => {
     for (const a of night.anomalies.filter((x) => x.clue)) expect(a.riskPerTurn).toBe(0);
+  });
+
+  it('"보지 마십시오" 이상 현상은 기한이 있다 (영원히 볼 수 없는 카메라는 없다)', () => {
+    for (const a of night.anomalies.filter((x) => x.gaze)) expect(a.expiresAtTurn, a.id).toBeDefined();
+  });
+
+  it('복원되는 수칙은 존재하는 수칙 번호와 단서를 가리킨다', () => {
+    for (const r of night.restored ?? []) {
+      expect(night.rules.some((x) => x.no === r.ruleNo)).toBe(true);
+      expect(CLUES[r.clue]).toBeDefined();
+    }
   });
 
   it('아무것도 하지 않으면 살아남을 수 없다', () => {
@@ -68,6 +88,21 @@ describe('밸런스', () => {
 
   it('2일차: 거짓 수칙을 간파해 단서를 챙겨도 80% 이상 생존 (대가는 있지만 함정은 아니다)', () => {
     for (const reward of REWARD_POOL) expect(survivalRate(NIGHTS[1], [...STARTER_DECK, reward], true), reward).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it.each([
+    [3, 0.9],
+    [4, 0.85],
+    [5, 0.8],
+    [6, 0.85],
+    [7, 0.65],
+  ])('%i일차: 평범한 덱으로 수칙대로 하면 %f 이상 생존 (7일차가 가장 어렵다)', (day, min) => {
+    expect(survivalRate(NIGHTS[day - 1], typicalDeck(day))).toBeGreaterThanOrEqual(min);
+    expect(survivalRate(NIGHTS[day - 1], typicalDeck(day), true)).toBeGreaterThanOrEqual(min);
+  });
+
+  it('3일차에 문루 배터리를 두 번 받아 저주 카드 2장이 섞여도 4일차는 80% 이상 생존', () => {
+    expect(survivalRate(NIGHTS[3], typicalDeck(4, ['laughter', 'laughter']))).toBeGreaterThanOrEqual(0.8);
   });
 
   it('보상 카드는 모두 존재하는 카드다', () => {
@@ -131,5 +166,40 @@ describe('기념품 밸런스', () => {
         }
         expect(ok / 100, set.join('+')).toBeGreaterThanOrEqual(0.85);
       }
+  });
+});
+
+import { ENDING_DEFS } from './endings';
+import { SPEAKERS } from './dialogue';
+import { STORY_COMPANIONS } from './companions';
+
+describe('스토리', () => {
+  it('스포일러 금지: 5일차까지의 수칙·메모·대사·단서에 주인공 이름이 없다', () => {
+    const early: string[] = [];
+    for (const n of NIGHTS.filter((x) => x.day <= 5)) {
+      early.push(...n.rules.map((r) => r.text), n.memo ?? '', ...(n.loopMemos ?? []).map((m) => m.text));
+      for (const a of n.anomalies) early.push(a.name, a.resolvedText ?? '', a.expiredText ?? '');
+    }
+    for (const c of Object.values(CLUES).filter((x) => x.day < 6)) early.push(c.name, c.text);
+    for (const sp of SPEAKERS) for (const [day, lines] of Object.entries(sp.lines)) if (Number(day) < 6) early.push(...lines);
+    const taeo = STORY_COMPANIONS['taeo-figure'];
+    early.push(taeo.capsuleLine, ...taeo.lines, ...(taeo.choice?.options.map((o) => o.reply) ?? []));
+    for (const t of early) expect(t, t).not.toMatch(/달희/);
+  });
+
+  it('스토리 동료는 캡슐 기계의 무작위 풀에 없다', () => {
+    for (const id of Object.keys(STORY_COMPANIONS)) expect(GACHA.items.some((i) => i.id === id), id).toBe(false);
+  });
+
+  it('엔딩 3종이 모두 정의돼 있고, 폐장 엔딩 문장에만 이름을 부르는 장면이 있다', () => {
+    expect(Object.keys(ENDING_DEFS).sort()).toEqual(['closing', 'regular', 'resign']);
+    expect(ENDING_DEFS.closing.choice).toMatch(/내 이름은/);
+  });
+
+  it('모든 스토리 동료 카드와 단서 선택지는 존재하는 것을 가리킨다', () => {
+    for (const c of Object.values(STORY_COMPANIONS)) {
+      expect(CARDS[c.card]).toBeDefined();
+      for (const o of c.choice?.options ?? []) if (o.clue) expect(CLUES[o.clue]).toBeDefined();
+    }
   });
 });

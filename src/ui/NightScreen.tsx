@@ -15,6 +15,7 @@ interface Props {
   mods?: NightMods;
   relicNames?: string[];
   myMemos?: string[];
+  clues?: string[];
   onFinish: (state: NightState) => void;
 }
 
@@ -25,7 +26,7 @@ const FAIL_REASON = {
   'bad-index': '',
 } as const;
 
-export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, relicNames = [], myMemos = [], onFinish }: Props) {
+export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, relicNames = [], myMemos = [], clues = [], onFinish }: Props) {
   const [state, setState] = useState(() => createNight(night, deck, seed, mods));
   const [camIndex, setCamIndex] = useState(0);
   const [msg, setMsg] = useState('근무 시작. 카메라를 넘겨 보며 수칙대로 대응하십시오.');
@@ -70,7 +71,8 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
   }
 
   function finishTurn() {
-    const next = endTurn(night, state);
+    const stared = active.some((a) => a.gaze && a.cameraId === cam.id);
+    const next = endTurn(night, state, cam.id);
     const gained = next.risk - state.risk;
     setState(next);
     if (next.outcome !== 'playing') {
@@ -90,7 +92,8 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
     const gone = expiredAt(night, next).map((a) => a.expiredText).filter(Boolean).join(' ');
     const base = gained > 0 ? `${passed} 어딘가에서 웃음소리가 커진다. 위험도 +${gained}` : `${passed} 조용하다. …너무 조용하다.`;
     const warn = nowDread && !dread ? ' 누군가 경비실 쪽으로 걸어온다.' : '';
-    setMsg((gone ? `${base} ${gone}` : base) + warn);
+    const eye = stared ? '화면 속 그것과 눈이 마주쳤다. ' : '';
+    setMsg(eye + (gone ? `${base} ${gone}` : base) + warn);
   }
 
   return (
@@ -171,7 +174,7 @@ export function NightScreen({ night, deck, seed, suspected, mods = NO_MODS, reli
       {showRules && (
         <div class="overlay" role="dialog" aria-modal="true" aria-label="수칙서" onClick={() => setShowRules(false)}>
           <div style={{ width: '100%', maxWidth: '398px', display: 'flex', flexDirection: 'column', gap: '12px' }} onClick={(e) => e.stopPropagation()}>
-            <Rulebook night={night} suspected={suspected} myMemos={myMemos} />
+            <Rulebook night={night} suspected={suspected} myMemos={myMemos} clues={clues} />
             <button type="button" class="btn-sub" onClick={() => setShowRules(false)}>닫기</button>
           </div>
         </div>

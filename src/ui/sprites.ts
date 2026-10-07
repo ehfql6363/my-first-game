@@ -107,3 +107,60 @@ export const TAEO: Sprite = [
   '.Kv..vK.',
   '.KK..KK.',
 ];
+
+/** 유령의 집 직원. 이불을 뒤집어쓴 것 같은데 이름표를 달고 있다 */
+export const GHOST: Sprite = [
+  '...KKKKKK...',
+  '..KWWWWWWK..',
+  '.KWWWWWWWWK.',
+  '.KWKKWWKKWK.',
+  '.KWKPWWKPWK.',
+  '.KWWWWWWWWK.',
+  '.KWWWRRWWWK.',
+  '.KWWWWWWWWK.',
+  '.KWYYWWWWWK.',
+  '.KWWWWWWWWK.',
+  '.KWKWWKWWKK.',
+  '.KK.KK.KK...',
+];
+
+/** 내려오는 별 */
+export const STAR: Sprite = [
+  '....Y....',
+  '....Y....',
+  '...YYY...',
+  'YYYYPYYYY',
+  '.YYYYYYY.',
+  '..YYYYY..',
+  '..YY.YY..',
+  '.YY...YY.',
+];
+
+/** 이쪽을 보는 경비원 (거울 속의 나, 정문 아래 경비원) */
+export const GUARD_FRONT: Sprite = [
+  '..KKKK..',
+  '.KMMMMK.',
+  '.KKKKKK.',
+  '.KSSSSK.',
+  '.KKSSKK.',
+  '.KSRRSK.',
+  '..KSSK..',
+  '.KMMMMK.',
+  'KMMMMMMK',
+  'KMMYMMMK',
+  'KMMMMMMK',
+  '.KmmmmK.',
+  '.Km..mK.',
+  '.KK..KK.',
+];
+
+/** 문루가 내민 배터리 */
+export const BATTERY: Sprite = [
+  '.KKKK.',
+  'KYYYYK',
+  'KYYYYK',
+  'KYPPYK',
+  'KYYYYK',
+  'KYYYYK',
+  '.KKKK.',
+];

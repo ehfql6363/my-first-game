@@ -142,4 +142,28 @@ describe('밤 경비실', () => {
     const all = playCard(two, cards, s, 1, 'cam');
     expect(all.ok && all.resolvedCount).toBe(2);
   });
+
+  it('"보지 마십시오": 그 카메라를 보며 턴을 끝낼 때만 위험도가 오르고, 카드로는 사라지지 않는다', () => {
+    const night: NightDef = { ...NIGHT, anomalies: [{ id: 'mirror', name: '거울', kind: 'mirror', cameraId: 'cam', appearsAtTurn: 0, requires: 'any', riskPerTurn: 2, gaze: true }] };
+    const s = createNight(night, Array(10).fill('lock'), 1);
+    expect(endTurn(night, s, 'cam').risk).toBe(2);
+    expect(endTurn(night, s, 'other').risk).toBe(0);
+    const cards: Record<string, CardDef> = { ...CARDS, whistle: { id: 'whistle', name: '호루라기', cost: 2, kind: 'gear', response: 'any', desc: '' } };
+    const r = playCard(night, cards, withHand(s, ['whistle']), 0, 'cam');
+    expect(r.ok && r.resolvedAnomaly).toBeUndefined();
+  });
+
+  it('기한이 지나 사라질 때 효과(다음 턴 배터리, 문루 빚)가 생긴다', () => {
+    const night: NightDef = { ...NIGHT, endTurn: 9, anomalies: [{ id: 'offer', name: '문루의 배터리', kind: 'offer', cameraId: 'cam', appearsAtTurn: 0, expiresAtTurn: 1, requires: 'lock', riskPerTurn: 0, onExpire: { battery: 2, debt: 1 } }] };
+    const s = endTurn(night, createNight(night, Array(10).fill('light'), 1));
+    expect(s.battery).toBe(NIGHT_RULES.batteryPerTurn + 2);
+    expect(s.debt).toBe(1);
+  });
+
+  it('카메라 확대로 읽어야 하는 이상 현상(requires zoom)은 확대로 해결되고, 모든 카메라도 드러난다', () => {
+    const night: NightDef = { ...NIGHT, anomalies: [{ id: 'wall', name: '벽의 이름', kind: 'wall', cameraId: 'cam', appearsAtTurn: 0, requires: 'zoom', riskPerTurn: 0, clue: 'own-name' }] };
+    const r = playCard(night, CARDS, withHand(createNight(night, Array(10).fill('lock'), 1), ['zoom']), 0, 'cam');
+    expect(r.ok && r.resolvedAnomaly?.id).toBe('wall');
+    expect(r.ok && r.state.revealed).toBe(true);
+  });
 });
