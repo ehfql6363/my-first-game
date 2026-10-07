@@ -18,6 +18,7 @@ test('타이틀 → 수칙서 → 경비실 화면이 폰 크기에서 가로로
   await page.getByRole('button', { name: /CAM 03/ }).click();
   await page.getByRole('button', { name: /소리/ }).click();
   expect(errors).toEqual([]);
+  await page.getByRole('button', { name: /CAM 01/ }).click();
   await page.screenshot({ path: 'e2e/.results/night-start.png' });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
